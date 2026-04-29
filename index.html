@@ -491,35 +491,44 @@ function renderFC(){
   document.getElementById('fc-counter').textContent=(fcIdx+1)+' / '+fcPool.length;
   document.getElementById('fc-sub-label').textContent=TSUBS[q.sub]||q.sub;
 
-  const optsList=q.a.map((a,i)=>{
+  // Build options — avoid nested quotes in template literals
+  let optsList='';
+  for(let i=0;i<q.a.length;i++){
     const hi=i===q.ans&&fcFlipped;
-    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:8px;border:1px solid ${hi?'#378ADD':'#232d47'};background:${hi?'#1a2744':'#0f1117'}">
-      <span style="font-family:monospace;font-size:12px;color:${hi?'#378ADD':'#4a5578'};flex-shrink:0;font-weight:700">${'ABCD'[i]}.</span>
-      <span style="font-size:12px;color:${hi?'#7eb3f5':'#8892aa'};line-height:1.5;font-weight:${hi?'600':'400'}">${a}</span>
-    </div>`;
-  }).join('');
+    const border=hi?'1px solid #378ADD':'1px solid #232d47';
+    const bg=hi?'#1a2744':'#0f1117';
+    const codeColor=hi?'#378ADD':'#4a5578';
+    const textColor=hi?'#7eb3f5':'#8892aa';
+    const fw=hi?'700':'400';
+    optsList+=`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:8px;border:${border};background:${bg}">`;
+    optsList+=`<span style="font-family:monospace;font-size:12px;color:${codeColor};flex-shrink:0;font-weight:700">${'ABCD'[i]}.</span>`;
+    optsList+=`<span style="font-size:12px;color:${textColor};line-height:1.5;font-weight:${fw}">${q.a[i]}</span>`;
+    optsList+='</div>';
+  }
 
-  const explBlock=fcFlipped?`
-    <div style="margin-top:10px;padding:.65rem .9rem;background:#0f1117;border-radius:8px;border-left:3px solid #378ADD">
-      <div style="font-size:10px;color:#4a5578;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Explicación</div>
-      <div id="expl-ai-${q.id}" style="font-size:12px;color:#8892aa;line-height:1.6">${explCache[q.id]||'Toca 🔊 Leer para generar la explicación.'}</div>
-    </div>`:'<div style="font-size:11px;color:#4a5578;margin-top:10px;text-align:center">— toca para revelar la respuesta —</div>';
+  const hint='<div style="font-size:11px;color:#4a5578;margin-top:10px;text-align:center">— toca para revelar la respuesta —</div>';
 
-  const bgColor=fcFlipped?'#1a2744':'#161b2e';
-  const borderColor=fcFlipped?'#2a3a60':'#232d47';
+  let explBlock='';
+  if(fcFlipped){
+    const txt=explCache[q.id]||'Toca 🔊 Leer para generar la explicación.';
+    explBlock=`<div style="margin-top:10px;padding:.65rem .9rem;background:#0f1117;border-radius:8px;border-left:3px solid #378ADD">`;
+    explBlock+=`<div style="font-size:10px;color:#4a5578;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Explicación</div>`;
+    explBlock+=`<div id="expl-ai-${q.id}" style="font-size:12px;color:#8892aa;line-height:1.6">${txt}</div>`;
+    explBlock+=`</div>`;
+  }
 
-  document.getElementById('fc-content').innerHTML=`
-    <div id="fc-card-wrap" onclick="flipFC()" style="cursor:pointer;margin-bottom:.75rem">
-      <div id="fc-card-inner" style="
-        background:${bgColor};border:1px solid ${borderColor};border-radius:14px;
-        padding:1.25rem;transition:background .4s,border-color .4s;
-      ">
-        <div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:8px;text-align:center">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
-        <div style="font-size:14px;color:#e8eaf0;line-height:1.65;margin-bottom:10px">${q.q}</div>
-        <div style="display:flex;flex-direction:column;gap:5px">${optsList}</div>
-        ${explBlock}
-      </div>
-    </div>`;
+  const bg=fcFlipped?'#1a2744':'#161b2e';
+  const border=fcFlipped?'#2a3a60':'#232d47';
+
+  let html='<div id="fc-card-wrap" onclick="flipFC()" style="cursor:pointer;margin-bottom:.75rem">';
+  html+=`<div id="fc-card-inner" style="background:${bg};border:1px solid ${border};border-radius:14px;padding:1.25rem;transition:background .4s,border-color .4s">`;
+  html+=`<div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:8px;text-align:center">${q.id} · ${TSUBS[q.sub]||q.sub}</div>`;
+  html+=`<div style="font-size:14px;color:#e8eaf0;line-height:1.65;margin-bottom:10px">${q.q}</div>`;
+  html+=`<div style="display:flex;flex-direction:column;gap:5px">${optsList}</div>`;
+  html+= fcFlipped ? explBlock : hint;
+  html+='</div></div>';
+
+  document.getElementById('fc-content').innerHTML=html;
 }
 
 function flipFC(){
