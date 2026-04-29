@@ -175,11 +175,6 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <h1>General Class – Elemento 3</h1>
     <p>Pool oficial FCC · traducción en español</p>
     <span class="badge">2023 – 2027 · 429 preguntas</span>
-    <div style="margin-top:12px">
-      <button id="btn-api-config" onclick="showApiSetup()" style="padding:7px 18px;background:#1a2744;border:1px solid #2a3a60;border-radius:20px;font-size:12px;color:#7eb3f5;cursor:pointer;font-weight:500">
-        🔑 Configurar instructor de voz (OpenAI)
-      </button>
-    </div>
   </div>
   <div class="mode-grid">
     <div class="mode-card" onclick="goRepasar()">
@@ -302,37 +297,6 @@ input[type=range]{width:100%;accent-color:#378ADD}
   <div id="quiz-content"></div>
 </div>
 
-<!-- API KEY SETUP MODAL -->
-<div id="modal-api" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;overflow-y:auto">
-  <div style="background:#161b2e;border:1px solid #2a3a60;border-radius:16px;padding:1.5rem;max-width:400px;width:90%;margin:40px auto">
-    <div style="text-align:center;margin-bottom:1rem">
-      <div style="font-size:30px;margin-bottom:8px">🔑</div>
-      <h2 style="font-size:16px;font-weight:600;color:#e8eaf0;margin-bottom:6px">Instructor de voz — OpenAI</h2>
-      <p style="font-size:12px;color:#8892aa;line-height:1.5">Ingresa tu API Key de OpenAI para activar el instructor de voz y las explicaciones. Se guarda solo en este navegador.</p>
-    </div>
-    <div id="api-error" style="display:none;background:#2a1215;border:1px solid #c0392b;border-radius:8px;padding:.6rem;font-size:12px;color:#e57373;margin-bottom:.75rem"></div>
-    <div style="margin-bottom:.75rem">
-      <label style="display:block;font-size:12px;color:#8892aa;margin-bottom:5px">API Key de OpenAI</label>
-      <input id="api-key-input" type="password" placeholder="sk-proj-..." style="width:100%;padding:10px;background:#0f1117;border:1px solid #2a3a60;border-radius:8px;color:#e8eaf0;font-size:13px;font-family:monospace;outline:none">
-    </div>
-    <div style="margin-bottom:.75rem">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8892aa;cursor:pointer">
-        <input type="checkbox" onchange="document.getElementById('api-key-input').type=this.checked?'text':'password'">
-        Mostrar clave
-      </label>
-    </div>
-    <div style="background:#1a2030;border-radius:8px;padding:.65rem;margin-bottom:1rem;font-size:11px;color:#8892aa;line-height:1.7">
-      <strong style="color:#7eb3f5">¿Cómo obtener la API Key?</strong><br>
-      1. Ve a <strong style="color:#c8d0e0">platform.openai.com</strong><br>
-      2. Menú → API Keys → Create new secret key<br>
-      3. Copia toda la clave y pégala arriba
-    </div>
-    <div style="display:flex;gap:8px">
-      <button id="btn-save-api" onclick="saveApiKey()" style="flex:1;padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 Guardar</button>
-      <button id="btn-cancel-api" onclick="closeApiSetup()" style="display:none;padding:11px 14px;background:#161b2e;color:#8892aa;border:1px solid #2a3a60;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
-    </div>
-  </div>
-</div>
 
 <script>
 
@@ -779,96 +743,11 @@ function resetStats(){
   updateHomeProg();
 }
 
-// ── OPENAI — INSTRUCTOR ──────────────────────────────
-let OPENAI_KEY=localStorage.getItem('gfcc_apikey')||'';
+// ── CLOUDFLARE WORKER — INSTRUCTOR ───────────────────
+const WORKER_URL='https://ham-radio-api.franklinsandovalit.workers.dev';
 let currentAudio=null;
 let explCache={};
 
-async function getExplanation(q){
-  if(explCache[q.id])return explCache[q.id];
-  const prompt=`Eres un instructor de radioaficionado en español. Explica brevemente (2-3 oraciones) por qué la respuesta correcta a esta pregunta del examen FCC General Class es la que es. Usa terminología técnica correcta pero accesible.
-
-Pregunta: ${q.q}
-A: ${q.a[0]}
-B: ${q.a[1]}
-C: ${q.a[2]}
-D: ${q.a[3]}
-Respuesta correcta: ${'ABCD'[q.ans]}. ${q.a[q.ans]}
-
-Solo da la explicación, sin repetir la pregunta ni la respuesta.`;
-
-  try{
-    const res=await fetch('https://api.openai.com/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_KEY},
-      body:JSON.stringify({model:'gpt-4o-mini',max_tokens:150,temperature:0.3,
-        messages:[{role:'system',content:'Eres un instructor de radioaficionado experto que explica conceptos de forma clara y concisa en español latinoamericano.'},{role:'user',content:prompt}]
-      })
-    });
-    const data=await res.json();
-    const text=data.choices?.[0]?.message?.content?.trim()||'No se pudo generar la explicación.';
-    explCache[q.id]=text;
-    return text;
-  }catch(e){return 'Error al obtener la explicación. Verifica tu conexión.';}
-}
-
-async function speakQuestion(q, includeExpl=true){
-  if(!OPENAI_KEY){showApiSetup();return;}
-  // Stop any current audio
-  if(currentAudio){currentAudio.pause();currentAudio=null;}
-
-  const btn=document.getElementById('btn-speak-'+q.id);
-  if(btn){btn.disabled=true;btn.innerHTML='<span style="font-size:14px">⏳</span> Cargando...';}
-
-  // Get explanation if needed
-  let expl='';
-  if(includeExpl){
-    const explEl=document.getElementById('expl-ai-'+q.id);
-    if(explEl){explEl.innerHTML='<span class="loading-dots">Generando explicación</span>';}
-    expl=await getExplanation(q);
-    if(explEl){explEl.textContent=expl;explEl.classList.add('loaded');}
-  }
-
-  // Build TTS text — quiz: only question + options; others: + answer + explanation
-  const letters=['A','B','C','D'];
-  const optsText=q.a.map((a,i)=>letters[i]+': '+a).join('. ');
-  const ttsText=includeExpl
-    ?`${q.q}. Las opciones son: ${optsText}. La respuesta correcta es ${letters[q.ans]}: ${q.a[q.ans]}.${expl?' '+expl:''}`
-    :`${q.q}. Las opciones son: ${optsText}.`;
-
-  try{
-    const res=await fetch('https://api.openai.com/v1/audio/speech',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_KEY},
-      body:JSON.stringify({model:'tts-1',voice:'nova',speed:0.95,input:ttsText})
-    });
-    if(!res.ok){
-      if(res.status===401){
-        localStorage.removeItem('gfcc_apikey');OPENAI_KEY='';
-        if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
-        showApiSetup('La API Key no es válida. Por favor ingresa una clave correcta.');
-        return;
-      }
-      throw new Error('HTTP '+res.status);
-    }
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    currentAudio=new Audio(url);
-    currentAudio.play();
-    if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
-    currentAudio.onended=()=>{
-      if(btn){btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
-      currentAudio=null;
-    };
-  }catch(e){
-    if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
-    alert('Error al generar el audio. Verifica tu conexión a internet.');
-  }
-}
-
-function stopAudio(){
-  if(currentAudio){currentAudio.pause();currentAudio=null;}
-}
 
 function buildInstructorBar(q, showExpl=true){
   return `<div class="instructor-bar">
@@ -877,64 +756,6 @@ function buildInstructorBar(q, showExpl=true){
     </button>
     ${showExpl?`<div class="expl-ai" id="expl-ai-${q.id}">Toca 🔊 para escuchar la pregunta con explicación generada.</div>`:'<div class="expl-ai">Lee la pregunta y las opciones en voz alta.</div>'}
   </div>`;
-}
-
-// ── API KEY MODAL ─────────────────────────────────────
-function updateApiButton(){
-  var btn=document.getElementById('btn-api-config');
-  if(!btn)return;
-  if(OPENAI_KEY){
-    btn.innerHTML='✅ Instructor de voz activo';
-    btn.style.background='#0d2218';
-    btn.style.borderColor='#1a4a28';
-    btn.style.color='#4ade80';
-  } else {
-    btn.innerHTML='🔑 Configurar instructor de voz (OpenAI)';
-    btn.style.background='#1a2744';
-    btn.style.borderColor='#2a3a60';
-    btn.style.color='#7eb3f5';
-  }
-}
-
-function showApiSetup(errorMsg){
-  var modal=document.getElementById('modal-api');
-  modal.style.display='block';
-  var errEl=document.getElementById('api-error');
-  if(errorMsg){errEl.style.display='block';errEl.textContent=errorMsg;}
-  else{errEl.style.display='none';}
-  var cancelBtn=document.getElementById('btn-cancel-api');
-  if(cancelBtn)cancelBtn.style.display=OPENAI_KEY?'inline-block':'none';
-  document.getElementById('api-key-input').value='';
-}
-
-function closeApiSetup(){
-  document.getElementById('modal-api').style.display='none';
-}
-
-function saveApiKey(){
-  var input=document.getElementById('api-key-input');
-  var key=input.value.trim();
-  var errEl=document.getElementById('api-error');
-  if(!key||key.length<10){
-    errEl.style.display='block';
-    errEl.textContent='Por favor ingresa tu API Key completa.';
-    return;
-  }
-  try{
-    localStorage.setItem('gfcc_apikey', key);
-    OPENAI_KEY=key;
-    closeApiSetup();
-    updateApiButton();
-    alert('✅ API Key guardada. Ya puedes usar el instructor de voz 🔊');
-  }catch(e){
-    errEl.style.display='block';
-    errEl.textContent='Error al guardar: '+e.message;
-  }
-}
-
-// ── LOCALSTORAGE — STATS PERSISTENCE ──────────────────
-function saveStats(){
-  try{localStorage.setItem('gfcc_sess',JSON.stringify(sess));}catch(e){}
 }
 function loadStats(){
   try{const s=localStorage.getItem('gfcc_sess');if(s)sess=JSON.parse(s);}catch(e){}
@@ -950,11 +771,7 @@ document.getElementById('qs-filter').innerHTML=base;
 qsFilterChange();
 updateHomeProg();
 
-// Show API setup automatically if no key saved
-if(!OPENAI_KEY){
-  setTimeout(()=>showApiSetup(), 1000);
-}
-updateApiButton();
+
 
 // Service Worker — path compatible with GitHub Pages subfolders
 if('serviceWorker' in navigator){
