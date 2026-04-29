@@ -896,15 +896,17 @@ function closeApiSetup(){
 
 function saveApiKey(){
   const key=document.getElementById('api-key-input').value.trim();
-  if(!key||!key.startsWith('sk-')){
+  if(!key||key.length<20){
     const errEl=document.getElementById('api-error');
     errEl.style.display='block';
-    errEl.textContent='La clave debe comenzar con "sk-". Verifica que la copiaste correctamente de platform.openai.com';
+    errEl.textContent='La clave parece muy corta. Verifica que la copiaste completa desde platform.openai.com';
     return;
   }
   OPENAI_KEY=key;
   localStorage.setItem('gfcc_apikey',key);
   closeApiSetup();
+  // Confirm saved
+  alert('✅ API Key guardada correctamente. Ya puedes usar el instructor de voz.');
 }
 
 // ── LOCALSTORAGE — STATS PERSISTENCE ──────────────────
