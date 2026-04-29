@@ -765,8 +765,8 @@ async function fcSpeak(){
     const answerText='La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'. '+(expl||'');
     await playTTS(answerText);
     if(!speakActive&&!autoPlaying){
-      const b=document.getElementById('btn-fc-speak');
-      if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}
+      var speakBtnX=document.getElementById('btn-fc-speak');
+      if(speakBtnX){speakBtnX.classList.remove('active');speakBtnX.innerHTML='🔊 Leer';}
       return;
     }
     await new Promise(function(r){setTimeout(r,500);});
@@ -776,12 +776,12 @@ async function fcSpeak(){
       renderFC();
       await new Promise(function(r){setTimeout(r,300);});
       if(speakActive||autoPlaying)fcSpeak();
-      else{const b=document.getElementById('btn-fc-speak');if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}}
+      else{(function(){var _b=document.getElementById('btn-fc-speak');if(_b){_b.classList.remove('active');_b.innerHTML='🔊 Leer';}})()}
     }
   }catch(e){
     speakActive=false;
-    const b=document.getElementById('btn-fc-speak');
-    if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}
+    var speakBtnY=document.getElementById('btn-fc-speak');
+    if(speakBtnY){speakBtnY.classList.remove('active');speakBtnY.innerHTML='🔊 Leer';}
     if(autoPlaying)stopAutoPlay();
   }
 }
@@ -804,13 +804,15 @@ function toggleAutoPlay(){
 }
 
 // ── REPASAR INSTRUCTOR ────────────────────────────────
-function buildInstructorBar(q, showExpl=true){
-  return `<div class="instructor-bar">
-    <button class="btn-speak" id="btn-speak-${q.id}" onclick="speakQuestion(RAW.find(x=>x.id==='${q.id}'),${showExpl})">
-      <span style="font-size:14px">🔊</span> Escuchar
-    </button>
-    ${showExpl?`<div class="expl-ai" id="expl-ai-${q.id}">Toca 🔊 para escuchar la pregunta con explicación generada.</div>`:'<div class="expl-ai">Lee la pregunta y las opciones en voz alta.</div>'}
-  </div>`;
+function buildInstructorBar(q, showExpl){
+  var se = (showExpl===undefined)?true:showExpl;
+  var expl = se ? '<div class="expl-ai" id="expl-ai-'+q.id+'">Toca 🔊 para escuchar la pregunta con explicación generada.</div>' : '<div class="expl-ai">Lee la pregunta y las opciones en voz alta.</div>';
+  return '<div class="instructor-bar">'
+    +'<button class="btn-speak" id="btn-speak-'+q.id+'" onclick="speakQuestion(RAW.find(function(x){return x.id===\''+q.id+'\';}),'+se+')">'
+    +'<span style="font-size:14px">🔊</span> Escuchar'
+    +'</button>'
+    +expl
+    +'</div>';
 }
 
 async function speakQuestion(q,includeExpl){
@@ -962,19 +964,19 @@ function renderQuizResult(){
   // Full question review
   const reviewRows=quizQs.map((q,i)=>{
     const selected=quizResults[i];
-    const correct=selected===q.ans;
-    const icon=correct?'✓':'✗';
-    const iconColor=correct?'#4ade80':'#e57373';
+    const isCorrect=selected===q.ans;
+    const icon=isCorrect?'✓':'✗';
+    const iconColor=isCorrect?'#4ade80':'#e57373';
     const opts=q.a.map((a,k)=>{
-      let bg='transparent'; let color='#8892aa'; let fw='400';
-      if(k===q.ans){bg='#1a2744';color='#7eb3f5';fw='600';}
-      if(k===selected && !correct){bg='#2a1215';color='#e57373';fw='600';}
+      let bg='transparent'; let optColor='#8892aa'; let fw='400';
+      if(k===q.ans){bg='#1a2744';optColor='#7eb3f5';fw='600';}
+      if(k===selected && !isCorrect){bg='#2a1215';optColor='#e57373';fw='600';}
       return `<div style="padding:4px 8px;border-radius:6px;background:${bg};margin-bottom:2px;font-size:11px;display:flex;gap:6px">
         <span style="color:#4a5578;font-family:monospace;flex-shrink:0">${'ABCD'[k]}.</span>
-        <span style="color:${color};font-weight:${fw}">${a}</span>
+        <span style="color:${optColor};font-weight:${fw}">${a}</span>
       </div>`;
     }).join('');
-    return `<div style="background:#161b2e;border:1px solid ${correct?'#1a2744':'#2a1215'};border-radius:12px;padding:1rem;margin-bottom:8px;text-align:left">
+    return `<div style="background:#161b2e;border:1px solid ${isCorrect?'#1a2744':'#2a1215'};border-radius:12px;padding:1rem;margin-bottom:8px;text-align:left">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:.5rem">
         <div>
           <span style="font-size:10px;font-family:monospace;color:#4a5578">${q.id}</span>
