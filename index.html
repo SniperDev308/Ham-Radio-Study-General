@@ -175,6 +175,11 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <h1>General Class – Elemento 3</h1>
     <p>Pool oficial FCC · traducción en español</p>
     <span class="badge">2023 – 2027 · 429 preguntas</span>
+    <div style="margin-top:12px">
+      <button onclick="showApiSetup()" style="padding:7px 18px;background:#1a2744;border:1px solid #2a3a60;border-radius:20px;font-size:12px;color:#7eb3f5;cursor:pointer;font-weight:500">
+        🔑 Configurar instructor de voz (OpenAI)
+      </button>
+    </div>
   </div>
   <div class="mode-grid">
     <div class="mode-card" onclick="goRepasar()">
@@ -878,6 +883,8 @@ function buildInstructorBar(q, showExpl=true){
 function showApiSetup(errorMsg=''){
   const modal=document.getElementById('modal-api');
   modal.style.display='flex';
+  modal.style.alignItems='center';
+  modal.style.justifyContent='center';
   const errEl=document.getElementById('api-error');
   if(errorMsg){errEl.style.display='block';errEl.textContent=errorMsg;}
   else{errEl.style.display='none';}
@@ -925,21 +932,10 @@ document.getElementById('fc-filter').innerHTML=base;
 document.getElementById('qs-filter').innerHTML=base;
 qsFilterChange();
 updateHomeProg();
-
-// Show API setup on first visit if no key saved
+// Show API setup automatically if no key saved
 if(!OPENAI_KEY){
-  // Small delay so app renders first
-  setTimeout(()=>showApiSetup(),800);
+  setTimeout(()=>showApiSetup(), 1000);
 }
-
-// Add settings button to home page
-document.querySelector('.home-header').insertAdjacentHTML('beforeend',
-  `<div style="margin-top:10px">
-    <button onclick="showApiSetup()" style="padding:5px 14px;background:#161b2e;border:1px solid #2a3a60;border-radius:20px;font-size:11px;color:#8892aa;cursor:pointer">
-      ⚙️ Configurar instructor de voz
-    </button>
-  </div>`
-);
 
 </script>
 </body>
