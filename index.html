@@ -284,7 +284,7 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#8892aa;cursor:pointer">
       <input type="checkbox" id="fc-mix" onchange="fcFilter()"> Mezclar
     </label>
-    <button id="btn-fc-speak" class="btn-auto" onclick="fcSpeak()" title="Leer flashcard en voz alta">
+    <button id="btn-fc-speak" class="btn-auto" onclick="toggleSpeak()" title="Leer flashcard en voz alta">
       🔊 Leer
     </button>
     <button id="btn-auto-play" class="btn-auto" onclick="toggleAutoPlay()" title="Modo automático — avanza al terminar de leer">
@@ -491,45 +491,69 @@ function renderFC(){
   document.getElementById('fc-counter').textContent=(fcIdx+1)+' / '+fcPool.length;
   document.getElementById('fc-sub-label').textContent=TSUBS[q.sub]||q.sub;
 
-  const optsList=q.a.map((a,i)=>`
-    <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:#0f1117;border-radius:8px;text-align:left;border:1px solid ${i===q.ans&&fcFlipped?'#378ADD':'#232d47'};${i===q.ans&&fcFlipped?'background:#1a2744;':''}"  >
-      <span style="font-family:monospace;font-size:12px;color:${i===q.ans&&fcFlipped?'#378ADD':'#4a5578'};flex-shrink:0;font-weight:600">${'ABCD'[i]}.</span>
-      <span style="font-size:12px;color:${i===q.ans&&fcFlipped?'#7eb3f5':'#8892aa'};line-height:1.5;font-weight:${i===q.ans&&fcFlipped?'600':'400'}">${a}</span>
-    </div>`).join('');
+  const optsList=q.a.map((a,i)=>{
+    const hi=i===q.ans&&fcFlipped;
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:8px;border:1px solid ${hi?'#378ADD':'#232d47'};background:${hi?'#1a2744':'#0f1117'}">
+      <span style="font-family:monospace;font-size:12px;color:${hi?'#378ADD':'#4a5578'};flex-shrink:0;font-weight:700">${'ABCD'[i]}.</span>
+      <span style="font-size:12px;color:${hi?'#7eb3f5':'#8892aa'};line-height:1.5;font-weight:${hi?'600':'400'}">${a}</span>
+    </div>`;
+  }).join('');
+
+  const explBlock=fcFlipped?`
+    <div style="margin-top:10px;padding:.65rem .9rem;background:#0f1117;border-radius:8px;border-left:3px solid #378ADD">
+      <div style="font-size:10px;color:#4a5578;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Explicación</div>
+      <div id="expl-ai-${q.id}" style="font-size:12px;color:#8892aa;line-height:1.6">${explCache[q.id]||'Toca 🔊 Leer para generar la explicación.'}</div>
+    </div>`:'<div style="font-size:11px;color:#4a5578;margin-top:10px;text-align:center">— toca para revelar la respuesta —</div>';
+
+  const bgColor=fcFlipped?'#1a2744':'#161b2e';
+  const borderColor=fcFlipped?'#2a3a60':'#232d47';
 
   document.getElementById('fc-content').innerHTML=`
-    <div class="fc-scene" onclick="flipFC()">
-      <div class="fc-card${fcFlipped?' flipped':''}" id="fc-card-inner">
-
-        <div class="fc-face fc-front">
-          <div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:6px">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
-          <div style="font-size:14px;color:#e8eaf0;line-height:1.6;margin-bottom:10px">${q.q}</div>
-          <div style="display:flex;flex-direction:column;gap:5px;width:100%">${optsList}</div>
-          <p class="fc-hint" style="margin-top:8px">— toca para revelar la respuesta —</p>
-        </div>
-
-        <div class="fc-face fc-back">
-          <div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:6px">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
-          <div style="font-size:14px;color:#e8eaf0;line-height:1.6;margin-bottom:10px">${q.q}</div>
-          <div style="display:flex;flex-direction:column;gap:5px;width:100%">${optsList}</div>
-          <div style="margin-top:10px;padding:.65rem .9rem;background:#0f1117;border-radius:8px;border-left:3px solid #378ADD;text-align:left;width:100%">
-            <div style="font-size:11px;color:#4a5578;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Explicación</div>
-            <div class="expl-ai loaded" id="expl-ai-${q.id}" style="font-size:12px;color:#8892aa;line-height:1.6">
-              ${explCache[q.id]||'Toca 🔊 para escuchar la explicación.'}
-            </div>
-          </div>
-        </div>
-
+    <div id="fc-card-wrap" onclick="flipFC()" style="cursor:pointer;margin-bottom:.75rem">
+      <div id="fc-card-inner" style="
+        background:${bgColor};border:1px solid ${borderColor};border-radius:14px;
+        padding:1.25rem;transition:background .4s,border-color .4s;
+      ">
+        <div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:8px;text-align:center">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
+        <div style="font-size:14px;color:#e8eaf0;line-height:1.65;margin-bottom:10px">${q.q}</div>
+        <div style="display:flex;flex-direction:column;gap:5px">${optsList}</div>
+        ${explBlock}
       </div>
     </div>`;
 }
 
 function flipFC(){
   fcFlipped=!fcFlipped;
-  const card=document.getElementById('fc-card-inner');
-  if(card){
-    if(fcFlipped)card.classList.add('flipped');
-    else card.classList.remove('flipped');
+  // Animate: scale down, swap, scale up
+  const wrap=document.getElementById('fc-card-inner');
+  if(wrap){
+    wrap.style.transition='transform .18s ease-in';
+    wrap.style.transform='scaleX(0)';
+    setTimeout(()=>{
+      renderFC();
+      const wrap2=document.getElementById('fc-card-inner');
+      if(wrap2){
+        wrap2.style.transform='scaleX(0)';
+        wrap2.style.transition='transform .18s ease-out';
+        setTimeout(()=>{wrap2.style.transform='scaleX(1)';},20);
+      }
+    },180);
+  } else {
+    renderFC();
+  }
+}
+
+// Leer as toggle
+let speakActive=false;
+function toggleSpeak(){
+  if(speakActive){
+    speakActive=false;
+    stopAudio();
+    const btn=document.getElementById('btn-fc-speak');
+    if(btn){btn.classList.remove('active');btn.innerHTML='🔊 Leer';}
+  } else {
+    speakActive=true;
+    fcSpeak();
   }
 }
 
@@ -552,53 +576,83 @@ function fcPrev(){
 async function fcSpeak(){
   const q=fcPool[fcIdx];
   const btn=document.getElementById('btn-fc-speak');
-  if(btn){btn.disabled=true;btn.innerHTML='⏳ Leyendo...';}
+  if(btn){btn.classList.add('active');btn.innerHTML='⏹ Detener';}
 
   try{
-    // Step 1: Read question + all options
     const letters=['A','B','C','D'];
     const optsText=q.a.map((a,i)=>letters[i]+': '+a).join('. ');
     const questionText=`${q.q}. Las opciones son: ${optsText}.`;
-    await playTTS(questionText);
 
-    // Step 2: Flip to BACK (always, even if already flipped)
+    // Step 1: Start BOTH in parallel — audio + explanation fetch
+    const [_, expl] = await Promise.all([
+      playTTS(questionText),
+      explCache[q.id] ? Promise.resolve(explCache[q.id]) : getExplanation(q)
+    ]);
+
+    if(!speakActive&&!autoPlaying)return;
+
+    // Update explanation text on card if visible
+    const explEl=document.getElementById('expl-ai-'+q.id);
+    if(explEl){explEl.textContent=expl;}
+
+    // Step 2: Flip card with animation
     if(!fcFlipped){
       fcFlipped=true;
-      const card=document.getElementById('fc-card-inner');
-      if(card)card.classList.add('flipped');
+      const wrap=document.getElementById('fc-card-inner');
+      if(wrap){
+        wrap.style.transition='transform .18s ease-in';
+        wrap.style.transform='scaleX(0)';
+        await new Promise(r=>setTimeout(r,180));
+        renderFC();
+        const wrap2=document.getElementById('fc-card-inner');
+        if(wrap2){
+          wrap2.style.transform='scaleX(0)';
+          wrap2.style.transition='transform .18s ease-out';
+          setTimeout(()=>{wrap2.style.transform='scaleX(1)';},20);
+        }
+        await new Promise(r=>setTimeout(r,250));
+      }
     }
-    await new Promise(r=>setTimeout(r,650)); // wait for flip animation to complete
+    if(!speakActive&&!autoPlaying)return;
 
-    // Step 3: Get explanation if not cached
-    const explEl=document.getElementById('expl-ai-'+q.id);
-    if(!explCache[q.id]){
-      if(explEl)explEl.textContent='Generando explicación...';
-      await getExplanation(q);
-      if(explEl){explEl.textContent=explCache[q.id];explEl.classList.add('loaded');}
-    }
+    // Step 3: Read answer + explanation — also prefetch NEXT card in background
+    const answerText=`La respuesta correcta es ${letters[q.ans]}: ${q.a[q.ans]}. ${expl||''}`;
+    const nextIdx=(fcIdx+1)%fcPool.length;
+    const nextQ=fcPool[nextIdx];
+    // Prefetch next explanation in background (don't await)
+    if(!explCache[nextQ.id]) getExplanation(nextQ);
 
-    // Step 4: Read answer + explanation
-    const answerText=`La respuesta correcta es ${letters[q.ans]}: ${q.a[q.ans]}. ${explCache[q.id]||''}`;
     await playTTS(answerText);
 
-    if(btn){btn.disabled=false;btn.innerHTML='🔊 Leer';}
+    if(!speakActive&&!autoPlaying){
+      const b=document.getElementById('btn-fc-speak');
+      if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}
+      return;
+    }
 
-    // Step 5: If auto-play ON → advance to next card automatically
-    if(autoPlaying){
-      await new Promise(r=>setTimeout(r,800)); // brief pause between cards
-      if(autoPlaying){
-        fcIdx=(fcIdx+1)%fcPool.length;
-        fcFlipped=false;
-        renderFC();
-        setTimeout(()=>{if(autoPlaying)fcSpeak();},400);
+    // Step 4: Advance to next
+    await new Promise(r=>setTimeout(r,500));
+    if(speakActive||autoPlaying){
+      fcIdx=(fcIdx+1)%fcPool.length;
+      fcFlipped=false;
+      renderFC();
+      await new Promise(r=>setTimeout(r,300));
+      if(speakActive||autoPlaying) fcSpeak();
+      else{
+        const b=document.getElementById('btn-fc-speak');
+        if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}
       }
     }
 
   }catch(e){
-    if(btn){btn.disabled=false;btn.innerHTML='🔊 Leer';}
+    speakActive=false;
+    const b=document.getElementById('btn-fc-speak');
+    if(b){b.classList.remove('active');b.innerHTML='🔊 Leer';}
     if(autoPlaying)stopAutoPlay();
   }
 }
+
+
 
 function playTTS(text){
   return new Promise(async(resolve,reject)=>{
@@ -629,6 +683,7 @@ function toggleAutoPlay(){
   const status=document.getElementById('auto-status');
   const progress=document.getElementById('auto-progress');
   if(autoPlaying){
+    speakActive=true;
     btn.classList.add('active');
     btn.innerHTML='⏸ Auto';
     if(status)status.style.display='inline';
@@ -641,6 +696,7 @@ function toggleAutoPlay(){
 
 function stopAutoPlay(){
   autoPlaying=false;
+  speakActive=false;
   stopAudio();
   const btn=document.getElementById('btn-auto-play');
   if(btn){btn.classList.remove('active');btn.innerHTML='▶ Auto';}
@@ -651,7 +707,7 @@ function stopAutoPlay(){
   const fill=document.getElementById('auto-progress-fill');
   if(fill)fill.style.width='0%';
   const speakBtn=document.getElementById('btn-fc-speak');
-  if(speakBtn){speakBtn.disabled=false;speakBtn.innerHTML='🔊 Leer';}
+  if(speakBtn){speakBtn.classList.remove('active');speakBtn.innerHTML='🔊 Leer';}
 }
 
 // ── QUIZ ──────────────────────────────────────────────
