@@ -303,39 +303,39 @@ input[type=range]{width:100%;accent-color:#378ADD}
 </div>
 
 <!-- API KEY SETUP MODAL -->
-<div id="modal-api" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;padding:1rem;overflow-y:auto">
-  <div style="background:#161b2e;border:1px solid #2a3a60;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;margin:2rem auto">
-    <div style="text-align:center;margin-bottom:1.25rem">
-      <div style="font-size:32px;margin-bottom:8px">🔑</div>
-      <h2 style="font-size:17px;font-weight:600;color:#e8eaf0;margin-bottom:6px">Configurar instructor de voz</h2>
-      <p style="font-size:13px;color:#8892aa;line-height:1.6">Para activar el instructor de voz y las explicaciones necesitas una API Key de OpenAI. Se guardará solo en este navegador.</p>
+<div id="modal-api" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;overflow-y:auto">
+  <div style="background:#161b2e;border:1px solid #2a3a60;border-radius:16px;padding:1.5rem;max-width:400px;width:90%;margin:40px auto">
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:30px;margin-bottom:8px">🔑</div>
+      <h2 style="font-size:16px;font-weight:600;color:#e8eaf0;margin-bottom:6px">Instructor de voz — OpenAI</h2>
+      <p style="font-size:12px;color:#8892aa;line-height:1.5">Ingresa tu API Key de OpenAI para activar el instructor de voz y las explicaciones. Se guarda solo en este navegador.</p>
     </div>
-    <div id="api-error" style="display:none;background:#2a1215;border:1px solid #c0392b;border-radius:8px;padding:.65rem .9rem;font-size:12px;color:#e57373;margin-bottom:1rem"></div>
-    <div style="margin-bottom:1rem">
-      <label style="display:block;font-size:12px;color:#8892aa;margin-bottom:6px">Tu API Key de OpenAI</label>
-      <input id="api-key-input" type="password" placeholder="sk-..." style="width:100%;padding:10px 12px;background:#0f1117;border:1px solid #2a3a60;border-radius:8px;color:#e8eaf0;font-size:14px;font-family:monospace">
+    <div id="api-error" style="display:none;background:#2a1215;border:1px solid #c0392b;border-radius:8px;padding:.6rem;font-size:12px;color:#e57373;margin-bottom:.75rem"></div>
+    <div style="margin-bottom:.75rem">
+      <label style="display:block;font-size:12px;color:#8892aa;margin-bottom:5px">API Key de OpenAI</label>
+      <input id="api-key-input" type="password" placeholder="sk-proj-..." style="width:100%;padding:10px;background:#0f1117;border:1px solid #2a3a60;border-radius:8px;color:#e8eaf0;font-size:13px;font-family:monospace;outline:none">
     </div>
-    <div style="margin-bottom:1rem">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#8892aa;cursor:pointer">
-        <input type="checkbox" id="api-show-key" onchange="document.getElementById('api-key-input').type=this.checked?'text':'password'">
+    <div style="margin-bottom:.75rem">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8892aa;cursor:pointer">
+        <input type="checkbox" onchange="document.getElementById('api-key-input').type=this.checked?'text':'password'">
         Mostrar clave
       </label>
     </div>
-    <div style="background:#1a2030;border-radius:8px;padding:.75rem;margin-bottom:1.25rem;font-size:11px;color:#8892aa;line-height:1.8">
-      <strong style="color:#7eb3f5">¿Cómo obtener una API Key?</strong><br>
+    <div style="background:#1a2030;border-radius:8px;padding:.65rem;margin-bottom:1rem;font-size:11px;color:#8892aa;line-height:1.7">
+      <strong style="color:#7eb3f5">¿Cómo obtener la API Key?</strong><br>
       1. Ve a <strong style="color:#c8d0e0">platform.openai.com</strong><br>
-      2. Inicia sesión o crea una cuenta gratuita<br>
-      3. Ve a <strong style="color:#c8d0e0">API Keys → Create new secret key</strong><br>
-      4. Copia la clave y pégala arriba
+      2. Menú → API Keys → Create new secret key<br>
+      3. Copia toda la clave y pégala arriba
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="saveApiKey()" style="flex:1;padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 Guardar y continuar</button>
-      <button onclick="closeApiSetup()" id="btn-cancel-api" style="padding:11px 16px;background:#161b2e;color:#8892aa;border:1px solid #2a3a60;border-radius:8px;font-size:13px;cursor:pointer;display:none">Cancelar</button>
+      <button id="btn-save-api" onclick="saveApiKey()" style="flex:1;padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 Guardar</button>
+      <button id="btn-cancel-api" onclick="closeApiSetup()" style="display:none;padding:11px 14px;background:#161b2e;color:#8892aa;border:1px solid #2a3a60;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
     </div>
   </div>
 </div>
 
 <script>
+
 const SUBS={"G1": "Reglas de la FCC", "G2": "Procedimientos operativos", "G3": "Propagación de radio", "G4": "Práctica de radioafición", "G5": "Principios eléctricos", "G6": "Componentes del circuito", "G7": "Circuitos prácticos", "G8": "Señales y emisiones", "G9": "Antenas y líneas de transmisión", "G0": "Seguridad RF y eléctrica"};
 const TSUBS={"G1A": "Privilegios de frecuencia", "G1B": "Restricciones de antena", "G1C": "Límites de potencia", "G1D": "Examinadores voluntarios", "G1E": "Terceros y control", "G2A": "Operación SSB/USB/LSB", "G2B": "Acceso a frecuencias", "G2C": "Telegrafía CW", "G2D": "Monitor voluntario", "G2E": "Modos digitales FT8/RTTY", "G3A": "Propagación solar", "G3B": "MUF, LUF y skip", "G3C": "Capas ionosféricas", "G4A": "Controles del transceptor", "G4B": "Equipos de medición", "G4C": "Interferencia RF", "G4D": "Procesador de voz", "G4E": "Instalaciones móviles", "G5A": "Reactancia e impedancia", "G5B": "Cálculos de dB y potencia", "G5C": "Transformadores y circuitos", "G6A": "Semiconductores y baterías", "G6B": "CIs y conectores", "G7A": "Fuentes de alimentación", "G7B": "Amplificadores y digital", "G7C": "Diseño transceptor SDR", "G8A": "Modulación AM/FM/digital", "G8B": "Mezcla y frecuencia IF", "G8C": "Modos digitales avanzados", "G9A": "Líneas de transmisión", "G9B": "Diseño de antenas", "G9C": "Antena Yagi", "G9D": "Antenas especiales", "G0A": "Seguridad RF", "G0B": "Seguridad eléctrica"};
 const GRP_SUBS={"G1": ["G1A", "G1B", "G1C", "G1D", "G1E"], "G2": ["G2A", "G2B", "G2C", "G2D", "G2E"], "G3": ["G3A", "G3B", "G3C"], "G4": ["G4A", "G4B", "G4C", "G4D", "G4E"], "G5": ["G5A", "G5B", "G5C"], "G6": ["G6A", "G6B"], "G7": ["G7A", "G7B", "G7C"], "G8": ["G8A", "G8B", "G8C"], "G9": ["G9A", "G9B", "G9C", "G9D"], "G0": ["G0A", "G0B"]};
@@ -880,13 +880,14 @@ function buildInstructorBar(q, showExpl=true){
 }
 
 // ── API KEY MODAL ─────────────────────────────────────
-function showApiSetup(errorMsg=''){
-  const modal=document.getElementById('modal-api');
+function showApiSetup(errorMsg){
+  var modal=document.getElementById('modal-api');
   modal.style.display='block';
-  const errEl=document.getElementById('api-error');
+  var errEl=document.getElementById('api-error');
   if(errorMsg){errEl.style.display='block';errEl.textContent=errorMsg;}
   else{errEl.style.display='none';}
-  document.getElementById('btn-cancel-api').style.display=OPENAI_KEY?'block':'none';
+  var cancelBtn=document.getElementById('btn-cancel-api');
+  if(cancelBtn)cancelBtn.style.display=OPENAI_KEY?'inline-block':'none';
   document.getElementById('api-key-input').value='';
 }
 
@@ -895,18 +896,23 @@ function closeApiSetup(){
 }
 
 function saveApiKey(){
-  const key=document.getElementById('api-key-input').value.trim();
-  if(!key||key.length<20){
-    const errEl=document.getElementById('api-error');
+  var input=document.getElementById('api-key-input');
+  var key=input.value.trim();
+  var errEl=document.getElementById('api-error');
+  if(!key||key.length<10){
     errEl.style.display='block';
-    errEl.textContent='La clave parece muy corta. Verifica que la copiaste completa desde platform.openai.com';
+    errEl.textContent='Por favor ingresa tu API Key completa.';
     return;
   }
-  OPENAI_KEY=key;
-  localStorage.setItem('gfcc_apikey',key);
-  closeApiSetup();
-  // Confirm saved
-  alert('✅ API Key guardada correctamente. Ya puedes usar el instructor de voz.');
+  try{
+    localStorage.setItem('gfcc_apikey', key);
+    OPENAI_KEY=key;
+    closeApiSetup();
+    alert('✅ API Key guardada. Ya puedes usar el instructor de voz 🔊');
+  }catch(e){
+    errEl.style.display='block';
+    errEl.textContent='Error al guardar: '+e.message;
+  }
 }
 
 // ── LOCALSTORAGE — STATS PERSISTENCE ──────────────────
