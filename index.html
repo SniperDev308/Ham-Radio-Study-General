@@ -517,11 +517,11 @@ function renderFC(){
     explBlock+=`</div>`;
   }
 
-  const bg=fcFlipped?'#1a2744':'#161b2e';
-  const border=fcFlipped?'#2a3a60':'#232d47';
+  const cardBg=fcFlipped?'#1a2744':'#161b2e';
+  const cardBorder=fcFlipped?'#2a3a60':'#232d47';
 
   let html='<div id="fc-card-wrap" onclick="flipFC()" style="cursor:pointer;margin-bottom:.75rem">';
-  html+=`<div id="fc-card-inner" style="background:${bg};border:1px solid ${border};border-radius:14px;padding:1.25rem;transition:background .4s,border-color .4s">`;
+  html+=`<div id="fc-card-inner" style="background:${cardBg};border:1px solid ${cardBorder};border-radius:14px;padding:1.25rem;transition:background .4s,border-color .4s">`;
   html+=`<div style="font-size:11px;color:#7eb3f5;font-weight:500;margin-bottom:8px;text-align:center">${q.id} · ${TSUBS[q.sub]||q.sub}</div>`;
   html+=`<div style="font-size:14px;color:#e8eaf0;line-height:1.65;margin-bottom:10px">${q.q}</div>`;
   html+=`<div style="display:flex;flex-direction:column;gap:5px">${optsList}</div>`;
