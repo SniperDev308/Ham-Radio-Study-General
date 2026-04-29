@@ -176,7 +176,7 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <p>Pool oficial FCC · traducción en español</p>
     <span class="badge">2023 – 2027 · 429 preguntas</span>
     <div style="margin-top:12px">
-      <button onclick="showApiSetup()" style="padding:7px 18px;background:#1a2744;border:1px solid #2a3a60;border-radius:20px;font-size:12px;color:#7eb3f5;cursor:pointer;font-weight:500">
+      <button id="btn-api-config" onclick="showApiSetup()" style="padding:7px 18px;background:#1a2744;border:1px solid #2a3a60;border-radius:20px;font-size:12px;color:#7eb3f5;cursor:pointer;font-weight:500">
         🔑 Configurar instructor de voz (OpenAI)
       </button>
     </div>
@@ -880,6 +880,22 @@ function buildInstructorBar(q, showExpl=true){
 }
 
 // ── API KEY MODAL ─────────────────────────────────────
+function updateApiButton(){
+  var btn=document.getElementById('btn-api-config');
+  if(!btn)return;
+  if(OPENAI_KEY){
+    btn.innerHTML='✅ Instructor de voz activo';
+    btn.style.background='#0d2218';
+    btn.style.borderColor='#1a4a28';
+    btn.style.color='#4ade80';
+  } else {
+    btn.innerHTML='🔑 Configurar instructor de voz (OpenAI)';
+    btn.style.background='#1a2744';
+    btn.style.borderColor='#2a3a60';
+    btn.style.color='#7eb3f5';
+  }
+}
+
 function showApiSetup(errorMsg){
   var modal=document.getElementById('modal-api');
   modal.style.display='block';
@@ -908,6 +924,7 @@ function saveApiKey(){
     localStorage.setItem('gfcc_apikey', key);
     OPENAI_KEY=key;
     closeApiSetup();
+    updateApiButton();
     alert('✅ API Key guardada. Ya puedes usar el instructor de voz 🔊');
   }catch(e){
     errEl.style.display='block';
@@ -937,6 +954,7 @@ updateHomeProg();
 if(!OPENAI_KEY){
   setTimeout(()=>showApiSetup(), 1000);
 }
+updateApiButton();
 
 // Service Worker — path compatible with GitHub Pages subfolders
 if('serviceWorker' in navigator){
