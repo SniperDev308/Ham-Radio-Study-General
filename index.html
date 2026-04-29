@@ -138,8 +138,29 @@ select:focus{outline:none;border-color:#378ADD}
 .mix-row label{font-size:13px;color:#8892aa;display:flex;align-items:center;gap:6px;cursor:pointer}
 input[type=checkbox]{accent-color:#378ADD}
 input[type=range]{width:100%;accent-color:#378ADD}
-.flashcard{background:#161b2e;border:1px solid #232d47;border-radius:14px;padding:1.75rem 1.25rem;margin-bottom:.75rem;min-height:180px;cursor:pointer;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:12px;transition:border-color .15s}
+.flashcard{background:#161b2e;border:1px solid #232d47;border-radius:14px;padding:1.75rem 1.25rem;margin-bottom:.75rem;min-height:200px;cursor:pointer;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:12px;transition:border-color .15s}
 .flashcard:hover{border-color:#378ADD}
+
+/* 3D flip */
+.fc-scene{perspective:1000px;margin-bottom:.75rem;min-height:200px}
+.fc-card{width:100%;min-height:200px;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer}
+.fc-card.flipped{transform:rotateY(180deg)}
+.fc-face{position:absolute;width:100%;min-height:200px;backface-visibility:hidden;border-radius:14px;padding:1.5rem 1.25rem;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;text-align:center;border:1px solid #232d47}
+.fc-front{background:#161b2e}
+.fc-back{background:#1a2744;border-color:#2a3a60;transform:rotateY(180deg)}
+.fc-card.flipped .fc-front{pointer-events:none}
+.fc-hint{font-size:11px;color:#4a5578;margin-top:.5rem}
+.fc-answer-wrap{background:#0f1117;border-radius:10px;padding:.75rem 1rem;text-align:left;width:100%;border-left:3px solid #378ADD}
+.fc-answer-wrap p{font-size:13px;color:#7eb3f5;font-weight:500;line-height:1.5}
+.fc-controls{display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
+.btn-auto{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #2a3a60;border-radius:8px;font-size:12px;cursor:pointer;background:#161b2e;color:#8892aa;font-weight:500;transition:all .15s}
+.btn-auto.active{background:#0d2218;border-color:#1a4a28;color:#4ade80}
+.btn-auto:hover{border-color:#378ADD}
+.auto-speed{font-size:12px;color:#8892aa;display:flex;align-items:center;gap:6px}
+.auto-speed input[type=range]{width:80px;accent-color:#378ADD}
+.auto-progress{height:3px;background:#232d47;border-radius:2px;margin-bottom:.5rem;overflow:hidden;display:none}
+.auto-progress.active{display:block}
+.auto-progress-fill{height:100%;background:#4ade80;border-radius:2px;transition:width linear}
 .fc-hint{font-size:11px;color:#4a5578;margin-top:.5rem}
 .fc-answer-wrap{background:#1a2744;border-radius:10px;padding:.85rem 1rem;text-align:left;margin-top:.5rem;border-left:3px solid #378ADD}
 .fc-answer-wrap p{font-size:13px;color:#7eb3f5;font-weight:500;line-height:1.5}
@@ -258,8 +279,26 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <button class="back-btn" onclick="goHome()">← Inicio</button>
     <div><div class="screen-title">Flashcards</div><div class="screen-sub" id="fc-sub-label"></div></div>
   </div>
-  <div style="margin-bottom:1rem"><select id="fc-filter" onchange="fcFilter()"></select></div>
-  <div class="mix-row"><label><input type="checkbox" id="fc-mix" onchange="fcFilter()"> Mezclar orden</label></div>
+  <div style="margin-bottom:.75rem"><select id="fc-filter" onchange="fcFilter()"></select></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#8892aa;cursor:pointer">
+      <input type="checkbox" id="fc-mix" onchange="fcFilter()"> Mezclar
+    </label>
+    <button id="btn-fc-speak" class="btn-auto" onclick="fcSpeak()" title="Leer flashcard en voz alta">
+      🔊 Leer
+    </button>
+    <button id="btn-auto-play" class="btn-auto" onclick="toggleAutoPlay()" title="Auto-avance">
+      ▶ Auto
+    </button>
+    <div class="auto-speed" id="auto-speed-ctrl" style="display:none">
+      <span>⏱</span>
+      <input type="range" id="auto-delay" min="5" max="30" step="5" value="15" oninput="updateAutoDelay()">
+      <span id="auto-delay-val">15s</span>
+    </div>
+  </div>
+  <div class="auto-progress" id="auto-progress">
+    <div class="auto-progress-fill" id="auto-progress-fill" style="width:0%"></div>
+  </div>
   <div class="pbar-wrap"><div class="pbar-fill" id="fc-pbar" style="width:0%"></div></div>
   <div id="fc-content"></div>
   <div class="nav2" id="fc-nav">
@@ -316,7 +355,7 @@ let openGrp=null;
 
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
-function goHome(){updateHomeProg();show('s-home');}
+function goHome(){stopAutoPlay();updateHomeProg();show('s-home');}
 
 // ── SECTION BROWSER ──────────────────────────────────
 function buildSectionBrowser(){
@@ -441,34 +480,195 @@ function repNext(){stopAudio();repIdx=(repIdx+1)%repPool.length;sess.reviewed++;
 function repPrev(){stopAudio();repIdx=(repIdx-1+repPool.length)%repPool.length;sess.reviewed++;renderRep();}
 
 // ── FLASHCARDS ────────────────────────────────────────
-function goFlash(){fcPool=[...RAW];fcIdx=0;fcFlipped=false;show('s-flash');renderFC();}
+function goFlash(){fcPool=[...RAW];fcIdx=0;fcFlipped=false;stopAutoPlay();show('s-flash');renderFC();}
 function fcFilter(){
   const v=document.getElementById('fc-filter').value;
   const mix=document.getElementById('fc-mix').checked;
   let pool=v==='ALL'?[...RAW]:RAW.filter(q=>q.sub.startsWith(v));
-  fcPool=mix?shuffle(pool):pool;fcIdx=0;fcFlipped=false;renderFC();
+  fcPool=mix?shuffle(pool):pool;fcIdx=0;fcFlipped=false;stopAutoPlay();renderFC();
 }
+
 function renderFC(){
   const q=fcPool[fcIdx];
   const pct=Math.round(((fcIdx+1)/fcPool.length)*100);
   document.getElementById('fc-pbar').style.width=pct+'%';
   document.getElementById('fc-counter').textContent=(fcIdx+1)+' / '+fcPool.length;
   document.getElementById('fc-sub-label').textContent=TSUBS[q.sub]||q.sub;
-  const answerBlock=fcFlipped
-    ?`<div class="fc-answer-wrap"><p>${'ABCD'[q.ans]}. ${q.a[q.ans]}</p></div>
-      ${buildInstructorBar(q,true)}`
-    :`<p class="fc-hint">— toca la tarjeta para ver la respuesta —</p>`;
+
   document.getElementById('fc-content').innerHTML=`
-    <div class="flashcard" onclick="${fcFlipped?'':'flipFC()'}" style="${fcFlipped?'cursor:default;':''}">
-      <div class="qsub">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
-      <div class="qtext">${q.q}</div>
-      ${answerBlock}
+    <div class="fc-scene" onclick="flipFC()">
+      <div class="fc-card${fcFlipped?' flipped':''}" id="fc-card-inner">
+        <div class="fc-face fc-front">
+          <div class="qsub" style="font-size:11px;color:#7eb3f5;font-weight:500">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
+          <div class="qtext" style="font-size:14px;color:#e8eaf0;line-height:1.65">${q.q}</div>
+          <p class="fc-hint">— toca para ver la respuesta —</p>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="qsub" style="font-size:11px;color:#7eb3f5;font-weight:500">${q.id} · ${TSUBS[q.sub]||q.sub}</div>
+          <div class="fc-answer-wrap">
+            <p>${'ABCD'[q.ans]}. ${q.a[q.ans]}</p>
+          </div>
+          <div class="expl-ai loaded" id="expl-ai-${q.id}" style="font-size:12px;color:#8892aa;line-height:1.6;text-align:left;width:100%">
+            ${explCache[q.id]||'Toca 🔊 para escuchar la explicación.'}
+          </div>
+        </div>
+      </div>
     </div>`;
-  // Nav always stays below — already in HTML, just update counter
 }
-function flipFC(){fcFlipped=!fcFlipped;renderFC();}
-function fcNext(){stopAudio();fcIdx=(fcIdx+1)%fcPool.length;fcFlipped=false;renderFC();}
-function fcPrev(){stopAudio();fcIdx=(fcIdx-1+fcPool.length)%fcPool.length;fcFlipped=false;renderFC();}
+
+function flipFC(){
+  fcFlipped=!fcFlipped;
+  const card=document.getElementById('fc-card-inner');
+  if(card){
+    if(fcFlipped)card.classList.add('flipped');
+    else card.classList.remove('flipped');
+  }
+}
+
+function fcNext(){
+  stopAudio();
+  if(autoPlaying)stopAutoPlay();
+  fcIdx=(fcIdx+1)%fcPool.length;
+  fcFlipped=false;
+  renderFC();
+}
+function fcPrev(){
+  stopAudio();
+  if(autoPlaying)stopAutoPlay();
+  fcIdx=(fcIdx-1+fcPool.length)%fcPool.length;
+  fcFlipped=false;
+  renderFC();
+}
+
+// ── FLASHCARD SPEAK ───────────────────────────────────
+async function fcSpeak(){
+  const q=fcPool[fcIdx];
+  const btn=document.getElementById('btn-fc-speak');
+  if(btn){btn.disabled=true;btn.innerHTML='⏳ Cargando...';}
+
+  // Step 1: Read question
+  const letters=['A','B','C','D'];
+  const optsText=q.a.map((a,i)=>letters[i]+': '+a).join('. ');
+  const questionText=`${q.q}. Las opciones son: ${optsText}.`;
+
+  try{
+    // Play question audio
+    await playTTS(questionText);
+
+    // Flip card after question
+    if(!fcFlipped){
+      setTimeout(()=>{flipFC();},300);
+    }
+
+    // Get explanation
+    const explEl=document.getElementById('expl-ai-'+q.id);
+    if(!explCache[q.id]){
+      if(explEl)explEl.textContent='Generando explicación...';
+      await getExplanation(q);
+      if(explEl){explEl.textContent=explCache[q.id];explEl.classList.add('loaded');}
+    }
+
+    // Play answer + explanation
+    const answerText=`La respuesta correcta es ${letters[q.ans]}: ${q.a[q.ans]}. ${explCache[q.id]||''}`;
+    await playTTS(answerText);
+
+    if(btn){btn.disabled=false;btn.innerHTML='🔊 Leer';}
+
+    // If auto-play is on, start countdown to next card
+    if(autoPlaying) startAutoCountdown();
+
+  }catch(e){
+    if(btn){btn.disabled=false;btn.innerHTML='🔊 Leer';}
+  }
+}
+
+function playTTS(text){
+  return new Promise(async(resolve, reject)=>{
+    try{
+      const res=await fetch(WORKER_URL+'/speak',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text})
+      });
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const blob=await res.blob();
+      const url=URL.createObjectURL(blob);
+      if(currentAudio){currentAudio.pause();currentAudio=null;}
+      currentAudio=new Audio(url);
+      currentAudio.play();
+      currentAudio.onended=()=>{currentAudio=null;resolve();};
+      currentAudio.onerror=()=>{currentAudio=null;reject();};
+    }catch(e){reject(e);}
+  });
+}
+
+// ── AUTO-PLAY ─────────────────────────────────────────
+let autoPlaying=false;
+let autoTimer=null;
+let autoDelay=15;
+let autoCountdownInterval=null;
+
+function toggleAutoPlay(){
+  autoPlaying=!autoPlaying;
+  const btn=document.getElementById('btn-auto-play');
+  const speedCtrl=document.getElementById('auto-speed-ctrl');
+  const progress=document.getElementById('auto-progress');
+  if(autoPlaying){
+    btn.classList.add('active');
+    btn.innerHTML='⏸ Auto';
+    speedCtrl.style.display='flex';
+    progress.classList.add('active');
+    // Start by speaking current card
+    fcSpeak();
+  } else {
+    stopAutoPlay();
+  }
+}
+
+function stopAutoPlay(){
+  autoPlaying=false;
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  if(autoCountdownInterval){clearInterval(autoCountdownInterval);autoCountdownInterval=null;}
+  const btn=document.getElementById('btn-auto-play');
+  if(btn){btn.classList.remove('active');btn.innerHTML='▶ Auto';}
+  const speedCtrl=document.getElementById('auto-speed-ctrl');
+  if(speedCtrl)speedCtrl.style.display='none';
+  const progress=document.getElementById('auto-progress');
+  if(progress)progress.classList.remove('active');
+  const fill=document.getElementById('auto-progress-fill');
+  if(fill)fill.style.width='0%';
+  const speakBtn=document.getElementById('btn-fc-speak');
+  if(speakBtn){speakBtn.disabled=false;speakBtn.innerHTML='🔊 Leer';}
+}
+
+function updateAutoDelay(){
+  autoDelay=parseInt(document.getElementById('auto-delay').value);
+  document.getElementById('auto-delay-val').textContent=autoDelay+'s';
+}
+
+function startAutoCountdown(){
+  if(!autoPlaying)return;
+  const fill=document.getElementById('auto-progress-fill');
+  if(fill){fill.style.transition='none';fill.style.width='0%';}
+  let elapsed=0;
+  const interval=100;
+  if(autoCountdownInterval)clearInterval(autoCountdownInterval);
+  autoCountdownInterval=setInterval(()=>{
+    if(!autoPlaying){clearInterval(autoCountdownInterval);return;}
+    elapsed+=interval;
+    const pct=Math.min(100,(elapsed/(autoDelay*1000))*100);
+    if(fill){fill.style.transition='none';fill.style.width=pct+'%';}
+    if(elapsed>=autoDelay*1000){
+      clearInterval(autoCountdownInterval);
+      if(autoPlaying){
+        fcIdx=(fcIdx+1)%fcPool.length;
+        fcFlipped=false;
+        renderFC();
+        setTimeout(()=>{if(autoPlaying)fcSpeak();},500);
+      }
+    }
+  },interval);
+}
 
 // ── QUIZ ──────────────────────────────────────────────
 function goQuizSetup(){show('s-quiz-setup');qsFilterChange();}
