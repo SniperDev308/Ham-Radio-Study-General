@@ -923,24 +923,29 @@ function loadStats(){
   try{const s=localStorage.getItem('gfcc_sess');if(s)sess=JSON.parse(s);}catch(e){}
 }
 
-// ── SERVICE WORKER ─────────────────────────────────────
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js')
-      .then(()=>console.log('SW registrado'))
-      .catch(e=>console.log('SW error:',e));
-  });
-}
-
 // ── INIT ───────────────────────────────────────────────
 loadStats();
+
+// Build select options for Flashcards and Quiz
+const base='<option value="ALL">Todas las categorías (429 preguntas)</option>'+Object.keys(SUBS).map(k=>`<option value="${k}">${k} – ${SUBS[k]}</option>`).join('');
 document.getElementById('fc-filter').innerHTML=base;
 document.getElementById('qs-filter').innerHTML=base;
 qsFilterChange();
 updateHomeProg();
+
 // Show API setup automatically if no key saved
 if(!OPENAI_KEY){
   setTimeout(()=>showApiSetup(), 1000);
+}
+
+// Service Worker — path compatible with GitHub Pages subfolders
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    const swPath = location.pathname.replace(/\/[^/]*$/, '/sw.js');
+    navigator.serviceWorker.register(swPath)
+      .then(()=>console.log('SW registrado'))
+      .catch(e=>console.log('SW error:',e));
+  });
 }
 
 </script>
