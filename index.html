@@ -303,8 +303,8 @@ input[type=range]{width:100%;accent-color:#378ADD}
 </div>
 
 <!-- API KEY SETUP MODAL -->
-<div id="modal-api" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;padding:1rem">
-  <div style="background:#161b2e;border:1px solid #2a3a60;border-radius:16px;padding:1.5rem;max-width:420px;width:100%">
+<div id="modal-api" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;padding:1rem;overflow-y:auto">
+  <div style="background:#161b2e;border:1px solid #2a3a60;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;margin:2rem auto">
     <div style="text-align:center;margin-bottom:1.25rem">
       <div style="font-size:32px;margin-bottom:8px">🔑</div>
       <h2 style="font-size:17px;font-weight:600;color:#e8eaf0;margin-bottom:6px">Configurar instructor de voz</h2>
@@ -882,9 +882,7 @@ function buildInstructorBar(q, showExpl=true){
 // ── API KEY MODAL ─────────────────────────────────────
 function showApiSetup(errorMsg=''){
   const modal=document.getElementById('modal-api');
-  modal.style.display='flex';
-  modal.style.alignItems='center';
-  modal.style.justifyContent='center';
+  modal.style.display='block';
   const errEl=document.getElementById('api-error');
   if(errorMsg){errEl.style.display='block';errEl.textContent=errorMsg;}
   else{errEl.style.display='none';}
