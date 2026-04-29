@@ -711,21 +711,30 @@ async function getExplanation(q){
 
 // ── TTS ───────────────────────────────────────────────
 function playTTS(text){
-  return new Promise(async(resolve,reject)=>{
+  return new Promise(async function(resolve,reject){
     try{
       const res=await fetch(WORKER_URL+'/speak',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text})
+        body:JSON.stringify({text:text})
       });
       if(!res.ok)throw new Error('HTTP '+res.status);
       const blob=await res.blob();
       const url=URL.createObjectURL(blob);
       if(currentAudio){currentAudio.pause();currentAudio=null;}
       currentAudio=new Audio(url);
-      currentAudio.play();
-      currentAudio.onended=()=>{currentAudio=null;resolve();};
-      currentAudio.onerror=()=>{currentAudio=null;reject();};
+      // Mobile fix: use promise-based play
+      var playPromise=currentAudio.play();
+      if(playPromise!==undefined){
+        playPromise.catch(function(e){
+          // Autoplay blocked - try to resume after brief delay
+          setTimeout(function(){
+            if(currentAudio)currentAudio.play().catch(function(){reject(e);});
+          },100);
+        });
+      }
+      currentAudio.onended=function(){currentAudio=null;resolve();};
+      currentAudio.onerror=function(){currentAudio=null;reject();};
     }catch(e){reject(e);}
   });
 }
@@ -739,13 +748,22 @@ async function fcSpeak(){
     const letters=['A','B','C','D'];
     const optsText=q.a.map(function(a,i){return letters[i]+': '+a;}).join('. ');
     const questionText=q.q+'. Las opciones son: '+optsText+'.';
-    const [,expl]=await Promise.all([
-      playTTS(questionText),
-      explCache[q.id]?Promise.resolve(explCache[q.id]):getExplanation(q)
-    ]);
+
+    // Step 1: Fetch explanation in background BEFORE playing audio
+    // This avoids mobile autoplay block since we start audio right after user tap
+    var explPromise=explCache[q.id]?Promise.resolve(explCache[q.id]):getExplanation(q);
+
+    // Step 2: Play question audio (must be close to user gesture)
+    await playTTS(questionText);
     if(!speakActive&&!autoPlaying)return;
+
+    // Step 3: Wait for explanation (usually already done by now)
+    var expl=await explPromise;
+    explCache[q.id]=expl;
     const explEl=document.getElementById('expl-ai-'+q.id);
     if(explEl)explEl.textContent=expl;
+
+    // Step 4: Flip card
     if(!fcFlipped){
       fcFlipped=true;
       const wrap=document.getElementById('fc-card-inner');
@@ -760,15 +778,22 @@ async function fcSpeak(){
       }
     }
     if(!speakActive&&!autoPlaying)return;
-    const nextIdx=(fcIdx+1)%fcPool.length;
+
+    // Step 5: Prefetch next card explanation
+    var nextIdx=(fcIdx+1)%fcPool.length;
     if(!explCache[fcPool[nextIdx].id])getExplanation(fcPool[nextIdx]);
-    const answerText='La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'. '+(expl||'');
+
+    // Step 6: Play answer + explanation
+    var answerText='La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'. '+(expl||'');
     await playTTS(answerText);
+
     if(!speakActive&&!autoPlaying){
       var speakBtnX=document.getElementById('btn-fc-speak');
       if(speakBtnX){speakBtnX.classList.remove('active');speakBtnX.innerHTML='🔊 Leer';}
       return;
     }
+
+    // Step 7: Advance to next
     await new Promise(function(r){setTimeout(r,500);});
     if(speakActive||autoPlaying){
       fcIdx=(fcIdx+1)%fcPool.length;
@@ -776,7 +801,7 @@ async function fcSpeak(){
       renderFC();
       await new Promise(function(r){setTimeout(r,300);});
       if(speakActive||autoPlaying)fcSpeak();
-      else{(function(){var _b=document.getElementById('btn-fc-speak');if(_b){_b.classList.remove('active');_b.innerHTML='🔊 Leer';}})()}
+      else{var speakBtnZ=document.getElementById('btn-fc-speak');if(speakBtnZ){speakBtnZ.classList.remove('active');speakBtnZ.innerHTML='🔊 Leer';}}
     }
   }catch(e){
     speakActive=false;
@@ -785,6 +810,7 @@ async function fcSpeak(){
     if(autoPlaying)stopAutoPlay();
   }
 }
+
 
 function toggleSpeak(){
   if(speakActive){speakActive=false;stopAudio();const btn=document.getElementById('btn-fc-speak');if(btn){btn.classList.remove('active');btn.innerHTML='🔊 Leer';}}
