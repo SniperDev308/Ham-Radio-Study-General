@@ -314,9 +314,16 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <h3>Opciones del examen</h3>
     <div class="field"><label>Subelemento</label><select id="qs-filter" onchange="qsFilterChange()"></select></div>
     <div class="field">
-      <label>Número de preguntas: <span class="range-val" id="qs-n-val">35</span></label>
-      <input type="range" id="qs-n" min="5" max="35" step="5" value="35" oninput="document.getElementById('qs-n-val').textContent=this.value">
-      <div id="qs-n-note" style="font-size:11px;color:#4a5578;margin-top:6px;display:none"></div>
+      <label style="display:flex;align-items:center;justify-content:space-between">
+        <span>Número de preguntas</span>
+        <span id="qs-n-note" style="font-size:11px;color:#4a5578;display:none"></span>
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <input type="number" id="qs-n" min="1" max="429" value="35"
+          style="width:90px;padding:9px 12px;background:#0f1117;border:1px solid #2a3a60;border-radius:8px;color:#e8eaf0;font-size:18px;font-weight:600;text-align:center;outline:none"
+          oninput="qsValidateN(this)">
+        <span style="font-size:13px;color:#8892aa" id="qs-n-max"></span>
+      </div>
     </div>
   </div>
   <button class="btn btn-accent" style="width:100%;padding:12px" onclick="startQuiz()">Comenzar quiz →</button>
@@ -389,7 +396,31 @@ function goHome(){
 }
 
 function goRepasar(){show('s-repasar');buildSectionBrowser();}
-function goFlash(){fcPool=[...RAW];fcIdx=0;fcFlipped=false;stopAutoPlay();show('s-flash');renderFC();}
+function goFlash(){
+  fcFlipped=false;stopAutoPlay();
+  // Restore saved filter and position
+  var saved=loadFcPos();
+  var filterEl=document.getElementById('fc-filter');
+  var mixEl=document.getElementById('fc-mix');
+  var v='ALL';
+  if(saved&&saved.filter){
+    v=saved.filter;
+    if(filterEl)filterEl.value=v;
+  } else if(filterEl){
+    v=filterEl.value;
+  }
+  var doMix=mixEl?mixEl.checked:false;
+  var pool=v==='ALL'?[...RAW]:RAW.filter(function(q){return q.sub.startsWith(v);});
+  fcPool=doMix?shuffle(pool):pool;
+  // Restore position if valid
+  if(saved&&saved.idx&&saved.idx<fcPool.length&&!doMix){
+    fcIdx=saved.idx;
+  } else {
+    fcIdx=0;
+  }
+  show('s-flash');
+  renderFC();
+}
 function goQuizSetup(){show('s-quiz-setup');qsFilterChange();}
 
 
@@ -405,6 +436,38 @@ function resetStats(){
   saveStats();
   updateHomeProg();
 }
+
+// ── POSITION PERSISTENCE ──────────────────────────────
+function saveRepPos(){
+  // Save current position using the last saved grp/sub
+  try{
+    var s=localStorage.getItem('gfcc_rep');
+    var cur=s?JSON.parse(s):{grp:'ALL',sub:'ALL',idx:0};
+    cur.idx=repIdx;
+    localStorage.setItem('gfcc_rep',JSON.stringify(cur));
+  }catch(e){}
+}
+
+function saveRepPosData(grp,sub,idx){
+  try{localStorage.setItem('gfcc_rep',JSON.stringify({grp:grp,sub:sub,idx:idx}));}catch(e){}
+}
+
+function loadRepPos(){
+  try{const s=localStorage.getItem('gfcc_rep');return s?JSON.parse(s):null;}catch(e){return null;}
+}
+
+function saveFcPos(){
+  try{
+    var filterEl=document.getElementById('fc-filter');
+    var v=filterEl?filterEl.value:'ALL';
+    localStorage.setItem('gfcc_fc',JSON.stringify({filter:v,idx:fcIdx}));
+  }catch(e){}
+}
+
+function loadFcPos(){
+  try{const s=localStorage.getItem('gfcc_fc');return s?JSON.parse(s):null;}catch(e){return null;}
+}
+
 
 function updateHomeProg(){
   const el=document.getElementById('home-prog');
@@ -589,7 +652,18 @@ function startStudy(grp,sub){
     subLabel=POOL_SUB[sub]+' preguntas · '+EXAM_GRP[grp]+' salen en examen ('+grp+')';
     poolN=POOL_SUB[sub]+' preguntas'; examN=EXAM_GRP[grp]+' en examen';
   }
-  repIdx=0;
+
+  // Restore saved position if same section
+  var saved=loadRepPos();
+  if(saved&&saved.grp===grp&&saved.sub===sub&&saved.idx<repPool.length){
+    repIdx=saved.idx;
+  } else {
+    repIdx=0;
+  }
+
+  // Save current section for next time
+  saveRepPosData(grp,sub,repIdx);
+
   document.getElementById('study-title').textContent=title;
   document.getElementById('study-sub').textContent=subLabel;
   document.getElementById('study-banner-name').textContent=title;
@@ -616,15 +690,19 @@ function renderRep(){
   </div>`;
 }
 
-function repNext(){stopAudio();repIdx=(repIdx+1)%repPool.length;sess.reviewed++;saveStats();renderRep();}
-function repPrev(){stopAudio();repIdx=(repIdx-1+repPool.length)%repPool.length;sess.reviewed++;saveStats();renderRep();}
+function repNext(){stopAudio();repIdx=(repIdx+1)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
+function repPrev(){stopAudio();repIdx=(repIdx-1+repPool.length)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
 
 // ── FLASHCARDS ────────────────────────────────────────
 function fcFilter(){
   const v=document.getElementById('fc-filter').value;
   const mix=document.getElementById('fc-mix').checked;
   let pool=v==='ALL'?[...RAW]:RAW.filter(q=>q.sub.startsWith(v));
-  fcPool=mix?shuffle(pool):pool;fcIdx=0;fcFlipped=false;stopAutoPlay();renderFC();
+  fcPool=mix?shuffle(pool):pool;
+  fcIdx=0;fcFlipped=false;
+  stopAutoPlay();
+  saveFcPos();
+  renderFC();
 }
 
 function renderFC(){
@@ -691,8 +769,8 @@ function flipFC(){
   } else {renderFC();}
 }
 
-function fcNext(){stopAudio();if(autoPlaying||speakActive)stopAutoPlay();fcIdx=(fcIdx+1)%fcPool.length;fcFlipped=false;renderFC();}
-function fcPrev(){stopAudio();if(autoPlaying||speakActive)stopAutoPlay();fcIdx=(fcIdx-1+fcPool.length)%fcPool.length;fcFlipped=false;renderFC();}
+function fcNext(){stopAudio();if(autoPlaying||speakActive)stopAutoPlay();fcIdx=(fcIdx+1)%fcPool.length;fcFlipped=false;saveFcPos();renderFC();}
+function fcPrev(){stopAudio();if(autoPlaying||speakActive)stopAutoPlay();fcIdx=(fcIdx-1+fcPool.length)%fcPool.length;fcFlipped=false;saveFcPos();renderFC();}
 
 // ── OPENAI EXPLANATION ────────────────────────────────
 async function getExplanation(q){
@@ -831,37 +909,53 @@ function toggleAutoPlay(){
 
 // ── REPASAR INSTRUCTOR ────────────────────────────────
 function buildInstructorBar(q, showExpl){
-  var se = (showExpl===undefined)?true:showExpl;
-  var expl = se ? '<div class="expl-ai" id="expl-ai-'+q.id+'">Toca 🔊 para escuchar la pregunta con explicación generada.</div>' : '<div class="expl-ai">Lee la pregunta y las opciones en voz alta.</div>';
+  var se=(showExpl===undefined)?true:showExpl;
+  var expl=se
+    ?'<div class="expl-ai" id="expl-ai-'+q.id+'">Toca 🔊 para escuchar la pregunta con explicación.</div>'
+    :'<div class="expl-ai">Lee la pregunta y las opciones en voz alta.</div>';
   return '<div class="instructor-bar">'
-    +'<button class="btn-speak" id="btn-speak-'+q.id+'" onclick="speakQuestion(RAW.find(function(x){return x.id===\''+q.id+'\';}),'+se+')">'
+    +'<button class="btn-speak" id="btn-speak-'+q.id+'" data-qid="'+q.id+'" data-expl="'+se+'" onclick="onSpeakClick(this)">'
     +'<span style="font-size:14px">🔊</span> Escuchar'
     +'</button>'
     +expl
     +'</div>';
 }
 
+function onSpeakClick(btn){
+  var qid=btn.getAttribute('data-qid');
+  var inclExpl=btn.getAttribute('data-expl')==='true';
+  var q=RAW.find(function(x){return x.id===qid;});
+  if(q) speakQuestion(q,inclExpl);
+}
+
 async function speakQuestion(q,includeExpl){
   if(currentAudio){currentAudio.pause();currentAudio=null;}
-  const btn=document.getElementById('btn-speak-'+q.id);
+  var btn=document.getElementById('btn-speak-'+q.id);
   if(btn){btn.disabled=true;btn.innerHTML='<span>⏳</span> Cargando...';}
-  let expl='';
-  if(includeExpl){
-    const explEl=document.getElementById('expl-ai-'+q.id);
-    if(explEl)explEl.innerHTML='<span class="loading-dots">Generando explicación</span>';
-    expl=await getExplanation(q);
-    if(explEl){explEl.textContent=expl;explEl.classList.add('loaded');}
-  }
-  const letters=['A','B','C','D'];
-  const optsText=q.a.map(function(a,i){return letters[i]+': '+a;}).join('. ');
-  const ttsText=includeExpl
-    ?(q.q+'. Las opciones son: '+optsText+'. La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'. '+(expl||''))
-    :(q.q+'. Las opciones son: '+optsText+'.');
   try{
+    // Fetch explanation in background while building TTS text
+    var explPromise=null;
+    if(includeExpl){
+      var explEl=document.getElementById('expl-ai-'+q.id);
+      if(explEl)explEl.textContent='Generando explicación...';
+      explPromise=explCache[q.id]?Promise.resolve(explCache[q.id]):getExplanation(q);
+    }
+    var letters=['A','B','C','D'];
+    var optsText=q.a.map(function(a,i){return letters[i]+': '+a;}).join('. ');
+    var ttsText;
+    if(includeExpl){
+      var expl=await explPromise;
+      explCache[q.id]=expl;
+      var explEl2=document.getElementById('expl-ai-'+q.id);
+      if(explEl2)explEl2.textContent=expl;
+      ttsText=q.q+'. Las opciones son: '+optsText+'. La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'. '+(expl||'');
+    } else {
+      ttsText=q.q+'. Las opciones son: '+optsText+'.';
+    }
     await playTTS(ttsText);
-    if(btn){btn.disabled=false;btn.innerHTML='<span>🔊</span> Escuchar';}
+    if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
   }catch(e){
-    if(btn){btn.disabled=false;btn.innerHTML='<span>🔊</span> Escuchar';}
+    if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:14px">🔊</span> Escuchar';}
   }
 }
 
@@ -870,25 +964,29 @@ function stopAudioBtn(){stopAudio();}
 // ── QUIZ ──────────────────────────────────────────────
 function qsFilterChange(){
   const v=document.getElementById('qs-filter').value;
-  const slider=document.getElementById('qs-n');
-  const valEl=document.getElementById('qs-n-val');
+  const input=document.getElementById('qs-n');
+  const maxEl=document.getElementById('qs-n-max');
   const note=document.getElementById('qs-n-note');
   if(v==='ALL'){
-    slider.value=35;slider.disabled=true;slider.style.opacity='0.4';
-    valEl.textContent='35';
-    note.style.display='block';
-    note.textContent='El examen oficial siempre tiene 35 preguntas cuando se estudia el pool completo.';
+    input.max=35;
+    input.value=35;
+    if(maxEl)maxEl.textContent='máx. 35 (examen oficial FCC)';
+    if(note)note.style.display='none';
   } else {
-    slider.disabled=false;slider.style.opacity='1';
     const maxQ=POOL_GRP[v]||35;
-    // build steps of 5 up to maxQ
-    let maxStep=Math.floor(maxQ/5)*5;
-    if(maxStep<5)maxStep=5;
-    slider.max=maxStep;
-    if(parseInt(slider.value)>maxStep){slider.value=maxStep;valEl.textContent=maxStep;}
-    note.style.display='block';
-    note.textContent='Esta sección tiene '+maxQ+' preguntas en el pool. Elige cuántas quieres practicar.';
+    input.max=maxQ;
+    input.value=maxQ;
+    if(maxEl)maxEl.textContent='máx. '+maxQ+' en esta sección';
+    if(note)note.style.display='none';
   }
+}
+
+function qsValidateN(input){
+  var max=parseInt(input.max)||429;
+  var val=parseInt(input.value)||1;
+  if(isNaN(val)||val<1)val=1;
+  if(val>max)val=max;
+  input.value=val;
 }
 function startQuiz(){
   const v=document.getElementById('qs-filter').value;
