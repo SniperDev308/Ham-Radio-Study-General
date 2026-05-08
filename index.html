@@ -438,18 +438,15 @@ function resetStats(){
 }
 
 // ── POSITION PERSISTENCE ──────────────────────────────
-function saveRepPos(){
-  // Save current position using the last saved grp/sub
-  try{
-    var s=localStorage.getItem('gfcc_rep');
-    var cur=s?JSON.parse(s):{grp:'ALL',sub:'ALL',idx:0};
-    cur.idx=repIdx;
-    localStorage.setItem('gfcc_rep',JSON.stringify(cur));
-  }catch(e){}
-}
+var lastRepGrp='ALL', lastRepSub='ALL';
 
 function saveRepPosData(grp,sub,idx){
+  lastRepGrp=grp; lastRepSub=sub;
   try{localStorage.setItem('gfcc_rep',JSON.stringify({grp:grp,sub:sub,idx:idx}));}catch(e){}
+}
+
+function saveRepPos(){
+  try{localStorage.setItem('gfcc_rep',JSON.stringify({grp:lastRepGrp,sub:lastRepSub,idx:repIdx}));}catch(e){}
 }
 
 function loadRepPos(){
@@ -655,17 +652,19 @@ function startStudy(grp,sub){
 
   // Restore saved position if same section
   var saved=loadRepPos();
-  if(saved&&saved.grp===grp&&saved.sub===sub&&saved.idx<repPool.length){
+  var resumed=false;
+  if(saved && saved.grp===grp && saved.sub===sub && saved.idx>0 && saved.idx<repPool.length){
     repIdx=saved.idx;
+    resumed=true;
   } else {
     repIdx=0;
   }
 
-  // Save current section for next time
-  saveRepPosData(grp,sub,repIdx);
+  // Save current section
+  saveRepPosData(grp, sub, repIdx);
 
   document.getElementById('study-title').textContent=title;
-  document.getElementById('study-sub').textContent=subLabel;
+  document.getElementById('study-sub').textContent=subLabel+(resumed?' · Continuando en pregunta '+(repIdx+1):'');
   document.getElementById('study-banner-name').textContent=title;
   document.getElementById('study-pill-pool').textContent=poolN;
   document.getElementById('study-pill-exam').textContent=examN;
