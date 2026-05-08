@@ -312,7 +312,14 @@ input[type=range]{width:100%;accent-color:#378ADD}
   </div>
   <div class="quiz-setup">
     <h3>Opciones del examen</h3>
-    <div class="field"><label>Subelemento</label><select id="qs-filter" onchange="qsFilterChange()"></select></div>
+    <div class="field">
+      <label>Subelemento</label>
+      <select id="qs-filter" onchange="qsFilterChange()"></select>
+    </div>
+    <div class="field" id="qs-sub-field" style="display:none">
+      <label>Subsección</label>
+      <select id="qs-sub" onchange="qsSubChange()"></select>
+    </div>
     <div class="field">
       <label style="display:flex;align-items:center;justify-content:space-between">
         <span>Número de preguntas</span>
@@ -966,17 +973,44 @@ function qsFilterChange(){
   const input=document.getElementById('qs-n');
   const maxEl=document.getElementById('qs-n-max');
   const note=document.getElementById('qs-n-note');
+  const subField=document.getElementById('qs-sub-field');
+  const subSel=document.getElementById('qs-sub');
+
   if(v==='ALL'){
-    input.max=35;
-    input.value=35;
+    // Examen oficial completo
+    input.max=35; input.value=35;
     if(maxEl)maxEl.textContent='máx. 35 (examen oficial FCC)';
     if(note)note.style.display='none';
+    if(subField)subField.style.display='none';
   } else {
+    // Subelemento seleccionado — mostrar subsecciones
+    const subs=GRP_SUBS[v]||[];
+    subSel.innerHTML='<option value="ALL">Todo '+v+' ('+SUBS[v]+')</option>'
+      +subs.map(s=>'<option value="'+s+'">'+s+' – '+(TSUBS[s]||s)+' ('+POOL_SUB[s]+' preg.)</option>').join('');
+    if(subField)subField.style.display='block';
+
+    // Set max and value based on full group
     const maxQ=POOL_GRP[v]||35;
-    input.max=maxQ;
-    input.value=maxQ;
+    input.max=maxQ; input.value=maxQ;
     if(maxEl)maxEl.textContent='máx. '+maxQ+' en esta sección';
     if(note)note.style.display='none';
+  }
+}
+
+function qsSubChange(){
+  const sub=document.getElementById('qs-sub').value;
+  const input=document.getElementById('qs-n');
+  const maxEl=document.getElementById('qs-n-max');
+  const grp=document.getElementById('qs-filter').value;
+
+  if(sub==='ALL'){
+    const maxQ=POOL_GRP[grp]||35;
+    input.max=maxQ; input.value=maxQ;
+    if(maxEl)maxEl.textContent='máx. '+maxQ+' en '+grp;
+  } else {
+    const maxQ=POOL_SUB[sub]||10;
+    input.max=maxQ; input.value=maxQ;
+    if(maxEl)maxEl.textContent='máx. '+maxQ+' en '+sub;
   }
 }
 
@@ -989,10 +1023,12 @@ function qsValidateN(input){
 }
 function startQuiz(){
   const v=document.getElementById('qs-filter').value;
+  const subEl=document.getElementById('qs-sub');
+  const sub=subEl?subEl.value:'ALL';
   const n=parseInt(document.getElementById('qs-n').value);
   let pool;
   if(v==='ALL'){
-    // Exactly like the real FCC exam: fixed questions per subelement, randomly selected
+    // Examen oficial: distribución fija por subelemento
     const examDist={G1:5,G2:5,G3:3,G4:5,G5:3,G6:2,G7:3,G8:3,G9:4,G0:2};
     pool=[];
     Object.keys(examDist).forEach(grp=>{
@@ -1000,10 +1036,13 @@ function startQuiz(){
       const picked=shuffle(grpPool).slice(0,examDist[grp]);
       pool.push(...picked);
     });
-    // Shuffle final pool so questions don't always come in G1,G2,G3... order
     pool=shuffle(pool);
+  } else if(sub==='ALL'){
+    // Todo el subelemento
+    pool=shuffle(RAW.filter(q=>q.sub.startsWith(v))).slice(0,n);
   } else {
-    pool=shuffle(RAW.filter(q=>q.sub.startsWith(v))).slice(0,Math.min(n,RAW.filter(q=>q.sub.startsWith(v)).length));
+    // Subsección específica
+    pool=shuffle(RAW.filter(q=>q.sub===sub)).slice(0,n);
   }
   quizQs=pool;
   quizIdx=0;quizScore=0;quizDone=false;quizResults=[];
