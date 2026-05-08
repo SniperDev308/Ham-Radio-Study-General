@@ -217,7 +217,7 @@ input[type=range]{width:100%;accent-color:#378ADD}
     </div>
   </div>
   <div class="progress-section">
-    <h3>📊 Estadísticas de la sesión</h3>
+    <h3>📊 Mis estadísticas</h3>
     <div id="home-prog"></div>
   </div>
 </div>
@@ -436,7 +436,21 @@ function saveStats(){
   try{localStorage.setItem('gfcc_sess',JSON.stringify(sess));}catch(e){}
 }
 function loadStats(){
-  try{const s=localStorage.getItem('gfcc_sess');if(s)sess=JSON.parse(s);}catch(e){}
+  try{
+    const s=localStorage.getItem('gfcc_sess');
+    if(s){
+      const parsed=JSON.parse(s);
+      // Validate structure before using
+      if(parsed && typeof parsed.correct==='number'){
+        sess=parsed;
+        // Ensure all fields exist (backward compat)
+        if(!sess.reviewed)sess.reviewed=0;
+        if(!sess.byGroup)sess.byGroup={};
+        if(!sess.bySub)sess.bySub={};
+        if(!sess.total)sess.total=0;
+      }
+    }
+  }catch(e){console.log('loadStats error:',e);}
 }
 function resetStats(){
   sess={correct:0,total:0,reviewed:0,byGroup:{},bySub:{}};
