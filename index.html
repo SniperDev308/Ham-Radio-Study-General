@@ -1077,18 +1077,28 @@ function renderQuizQ(){
   </div>`;
 }
 function answerQuiz(i){
-  // Just record the answer — no visual feedback
-  for(let k=0;k<4;k++){const el=document.getElementById('qo'+k);if(el){el.disabled=true;el.style.opacity=k===i?'1':'0.4';}}
-  // Mark selected option subtly
-  document.getElementById('qo'+i).style.borderColor='#378ADD';
-  document.getElementById('qo'+i).style.color='#e8eaf0';
-  quizResults.push(i); // store selected index, not true/false
+  // Record answer — NO visual feedback during quiz (shown at the end)
+  for(let k=0;k<4;k++){
+    const el=document.getElementById('qo'+k);
+    if(el){
+      el.disabled=true;
+      // Only dim unselected options slightly, no color changes
+      el.style.opacity=k===i?'1':'0.4';
+    }
+  }
+  // Just show a checkmark on selected option — no color reveal
+  const sel=document.getElementById('qo'+i);
+  if(sel){
+    sel.style.borderColor='#8892aa';
+    sel.innerHTML=sel.innerHTML.replace('<span class="oletter">','<span class="oletter" style="color:#e8eaf0">');
+  }
+  quizResults.push(i);
   // Move to next after brief pause
   setTimeout(()=>{
     quizIdx++;
     if(quizIdx>=quizQs.length){quizDone=true;renderQuizResult();}
     else renderQuizQ();
-  },600);
+  },500);
 }
 function renderQuizResult(){
   // Calculate score from stored answers

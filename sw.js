@@ -1,4 +1,4 @@
-const CACHE_NAME = 'general-fcc-v1';
+const CACHE_NAME = 'general-fcc-v3';
 const ASSETS = [
   '/',
   '/index.html',
