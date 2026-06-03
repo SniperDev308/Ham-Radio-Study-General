@@ -120,6 +120,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .opt.correct{border-color:#378ADD!important;background:#1a2744!important;color:#7eb3f5!important}
 .opt.wrong{border-color:#c0392b!important;background:#2a1215!important;color:#e57373!important}
 .opt.reveal{border-color:#378ADD!important;background:#1a2744!important;color:#7eb3f5!important}
+.opt.selected{border-color:#378ADD;background:#16233d;color:#e8eaf0}
+.opt.selected .oletter{color:#7eb3f5}
 .oletter{font-weight:600;min-width:16px;font-family:monospace;font-size:12px;flex-shrink:0;margin-top:1px;color:#4a5578}
 .opt.correct .oletter,.opt.reveal .oletter{color:#378ADD}
 .opt.wrong .oletter{color:#e57373}
@@ -220,6 +222,16 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <h3>📊 Mis estadísticas</h3>
     <div id="home-prog"></div>
   </div>
+  <!-- PAYPAL -->
+  <div style="text-align:center;padding:.25rem 0 1rem">
+    <a href="https://www.paypal.com/ncp/payment/7TG68C7CVWY46" target="_blank" rel="noopener"
+       style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:#0070ba;color:#fff;border-radius:24px;font-size:13px;font-weight:600;text-decoration:none;transition:background .15s;box-shadow:0 2px 8px rgba(0,112,186,.35)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082H9.825l-1.33 8.398h3.787c.457 0 .846-.332.918-.784l.038-.196.733-4.64.047-.254a.932.932 0 0 1 .918-.784h.578c3.741 0 6.671-1.52 7.526-5.912.358-1.84.173-3.373-.818-4.623z"/></svg>
+      Apoyar este proyecto
+    </a>
+    <div style="font-size:11px;color:#8892aa;margin-top:.5rem">Tu apoyo ayuda a mantener esta app gratuita &#9829;</div>
+    <div style="font-size:11px;color:#8892aa;margin-top:3px">Desarrollado por <strong style="color:#7eb3f5">K5PBL</strong></div>
+  </div>
 </div>
 
 <!-- REPASAR: BROWSER -->
@@ -249,7 +261,7 @@ input[type=range]{width:100%;accent-color:#378ADD}
 <!-- REPASAR: STUDY VIEW -->
 <div id="s-study" class="screen">
   <div class="screen-header">
-    <button class="back-btn" onclick="show('s-repasar')">← Secciones</button>
+    <button class="back-btn" onclick="stopRepAuto();show('s-repasar')">← Secciones</button>
     <div>
       <div class="screen-title" id="study-title">Estudiando</div>
       <div class="screen-sub" id="study-sub"></div>
@@ -265,6 +277,10 @@ input[type=range]{width:100%;accent-color:#378ADD}
     </div>
   </div>
   <div class="pbar-wrap"><div class="pbar-fill" id="rep-pbar" style="width:0%"></div></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+    <button id="btn-rep-auto" class="btn-auto" onclick="toggleRepAuto()" title="Modo automático — lee y avanza solo">▶ Auto</button>
+    <span id="rep-auto-status" style="font-size:11px;color:#4a5578;display:none">Lee la pregunta y la respuesta, y avanza solo</span>
+  </div>
   <div id="rep-content"></div>
   <div class="nav2">
     <button class="btn" onclick="repPrev()">← Anterior</button>
@@ -284,13 +300,10 @@ input[type=range]{width:100%;accent-color:#378ADD}
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#8892aa;cursor:pointer">
       <input type="checkbox" id="fc-mix" onchange="fcFilter()"> Mezclar
     </label>
-    <button id="btn-fc-speak" class="btn-auto" onclick="toggleSpeak()" title="Leer flashcard en voz alta">
-      🔊 Leer
-    </button>
-    <button id="btn-auto-play" class="btn-auto" onclick="toggleAutoPlay()" title="Modo automático — avanza al terminar de leer">
+    <button id="btn-auto-play" class="btn-auto" onclick="toggleAutoPlay()" title="Modo automático — lee y avanza solo">
       ▶ Auto
     </button>
-    <span id="auto-status" style="font-size:11px;color:#4a5578;display:none">Avanza al terminar de leer cada tarjeta</span>
+    <span id="auto-status" style="font-size:11px;color:#4a5578;display:none">Lee y avanza solo</span>
   </div>
   <div class="auto-progress" id="auto-progress">
     <div class="auto-progress-fill" id="auto-progress-fill" style="width:0%"></div>
@@ -361,7 +374,7 @@ const RAW=[{"id":"G1A01","sub":"G1A","q":"¿En qué bandas de radioaficionado de
 // ── STATE ─────────────────────────────────────────────
 const WORKER_URL='https://ham-radio-api.franklinsandovalit.workers.dev';
 let sess={correct:0,total:0,reviewed:0,byGroup:{},bySub:{}};
-let repPool=[...RAW],repIdx=0;
+let repPool=[...RAW],repIdx=0,repAuto=false;
 let fcPool=[...RAW],fcIdx=0,fcFlipped=false;
 let quizQs=[],quizIdx=0,quizScore=0,quizDone=false,quizResults=[];
 let currentAudio=null,explCache={};
@@ -397,6 +410,7 @@ function stopAutoPlay(){
 // ── NAVIGATION ────────────────────────────────────────
 function goHome(){
   stopAutoPlay();
+  stopRepAuto();
   saveStats();
   updateHomeProg();
   show('s-home');
@@ -706,12 +720,51 @@ function renderRep(){
     <div class="qtext">${q.q}</div>
     <div class="opts">${q.a.map((a,i)=>`<button class="opt${i===q.ans?' reveal':''}" disabled><span class="oletter">${'ABCD'[i]}.</span>${a}</button>`).join('')}</div>
     <div class="expl"><strong>Correcta:</strong> ${'ABCD'[q.ans]}. ${q.a[q.ans]}</div>
-    ${buildInstructorBar(q,true)}
   </div>`;
 }
 
-function repNext(){stopAudio();repIdx=(repIdx+1)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
-function repPrev(){stopAudio();repIdx=(repIdx-1+repPool.length)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
+function repNext(){if(repAuto)stopRepAuto();else stopAudio();repIdx=(repIdx+1)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
+function repPrev(){if(repAuto)stopRepAuto();else stopAudio();repIdx=(repIdx-1+repPool.length)%repPool.length;sess.reviewed++;saveStats();saveRepPos();renderRep();}
+
+// ── REPASAR AUTO (lee y avanza, sin botones manuales) ──
+function toggleRepAuto(){
+  repAuto=!repAuto;
+  const btn=document.getElementById('btn-rep-auto');
+  const status=document.getElementById('rep-auto-status');
+  if(repAuto){
+    if(btn){btn.classList.add('active');btn.innerHTML='⏸ Auto';}
+    if(status)status.style.display='inline';
+    repSpeak();
+  } else { stopRepAuto(); }
+}
+function stopRepAuto(){
+  repAuto=false;
+  stopAudio();
+  const btn=document.getElementById('btn-rep-auto');
+  if(btn){btn.classList.remove('active');btn.innerHTML='▶ Auto';}
+  const status=document.getElementById('rep-auto-status');
+  if(status)status.style.display='none';
+}
+async function repSpeak(){
+  if(!repAuto)return;
+  const q=repPool[repIdx];
+  try{
+    const letters=['A','B','C','D'];
+    const optsText=q.a.map(function(a,i){return letters[i]+': '+a;}).join('. ');
+    const ttsText=q.q+'. Las opciones son: '+optsText+'. La respuesta correcta es '+letters[q.ans]+': '+q.a[q.ans]+'.';
+    await playTTS(ttsText);
+    if(!repAuto)return;
+    await new Promise(function(r){setTimeout(r,800);});
+    if(!repAuto)return;
+    repIdx=(repIdx+1)%repPool.length;
+    sess.reviewed++;saveStats();saveRepPos();
+    renderRep();
+    await new Promise(function(r){setTimeout(r,300);});
+    if(repAuto)repSpeak();
+  }catch(e){
+    stopRepAuto();
+  }
+}
 
 // ── FLASHCARDS ────────────────────────────────────────
 function fcFilter(){
@@ -1059,46 +1112,62 @@ function startQuiz(){
     pool=shuffle(RAW.filter(q=>q.sub===sub)).slice(0,n);
   }
   quizQs=pool;
-  quizIdx=0;quizScore=0;quizDone=false;quizResults=[];
+  quizIdx=0;quizScore=0;quizDone=false;quizResults=new Array(quizQs.length).fill(null);
   show('s-quiz');renderQuizQ();
+}
+function quizAnswered(){
+  return quizResults.filter(function(r){return r!==null&&r!==undefined;}).length;
+}
+function updateQuizProgress(){
+  const answered=quizAnswered();
+  document.getElementById('quiz-pbar').style.width=Math.round((answered/quizQs.length)*100)+'%';
+  document.getElementById('quiz-sub-label').textContent='Pregunta '+(quizIdx+1)+' de '+quizQs.length+' · respondidas: '+answered+'/'+quizQs.length;
 }
 function renderQuizQ(){
   if(quizDone){renderQuizResult();return;}
   const q=quizQs[quizIdx];
-  const pct=Math.round((quizIdx/quizQs.length)*100);
-  document.getElementById('quiz-pbar').style.width=pct+'%';
-  document.getElementById('quiz-sub-label').textContent='Pregunta '+(quizIdx+1)+' de '+quizQs.length;
+  const sel=quizResults[quizIdx];
+  const opts=q.a.map((a,i)=>`<button class="opt${sel===i?' selected':''}" id="qo${i}" onclick="selectAnswer(${i})"><span class="oletter">${'ABCD'[i]}.</span>${a}</button>`).join('');
+  const isFirst=quizIdx===0;
+  const isLast=quizIdx===quizQs.length-1;
   document.getElementById('quiz-content').innerHTML=`<div class="qcard">
     <div class="qcard-top"><span class="qid">${q.id}</span><span class="qcount">${quizIdx+1}/${quizQs.length}</span></div>
     <div class="qsub">${TSUBS[q.sub]||q.sub}</div>
     <div class="qtext">${q.q}</div>
-    <div class="opts">${q.a.map((a,i)=>`<button class="opt" id="qo${i}" onclick="answerQuiz(${i})"><span class="oletter">${'ABCD'[i]}.</span>${a}</button>`).join('')}</div>
+    <div class="opts">${opts}</div>
     ${buildInstructorBar(q,false)}
-  </div>`;
+  </div>
+  <div class="nav2">
+    <button class="btn" onclick="quizPrev()"${isFirst?' disabled style="opacity:.4"':''}>← Anterior</button>
+    <span class="nav-info">${quizIdx+1} / ${quizQs.length}</span>
+    <button class="btn" onclick="quizNext()"${isLast?' disabled style="opacity:.4"':''}>Siguiente →</button>
+  </div>
+  <button class="btn btn-accent" style="width:100%;padding:12px;margin-top:.75rem" onclick="submitQuiz()">Corregir examen</button>`;
+  updateQuizProgress();
 }
-function answerQuiz(i){
-  // Record answer — NO visual feedback during quiz (shown at the end)
-  for(let k=0;k<4;k++){
+function selectAnswer(i){
+  // Mark the answer — can be changed freely, no feedback until "Corregir examen"
+  quizResults[quizIdx]=i;
+  for(let k=0;k<quizQs[quizIdx].a.length;k++){
     const el=document.getElementById('qo'+k);
-    if(el){
-      el.disabled=true;
-      // Only dim unselected options slightly, no color changes
-      el.style.opacity=k===i?'1':'0.4';
-    }
+    if(el)el.classList.toggle('selected',k===i);
   }
-  // Just show a checkmark on selected option — no color reveal
-  const sel=document.getElementById('qo'+i);
-  if(sel){
-    sel.style.borderColor='#8892aa';
-    sel.innerHTML=sel.innerHTML.replace('<span class="oletter">','<span class="oletter" style="color:#e8eaf0">');
+  updateQuizProgress();
+}
+function quizPrev(){
+  if(quizIdx>0){stopAudio();quizIdx--;renderQuizQ();}
+}
+function quizNext(){
+  if(quizIdx<quizQs.length-1){stopAudio();quizIdx++;renderQuizQ();}
+}
+function submitQuiz(){
+  const unanswered=quizQs.length-quizAnswered();
+  if(unanswered>0){
+    if(!confirm('Te quedan '+unanswered+' pregunta(s) sin responder. Se contarán como incorrectas. ¿Corregir el examen de todos modos?'))return;
   }
-  quizResults.push(i);
-  // Move to next after brief pause
-  setTimeout(()=>{
-    quizIdx++;
-    if(quizIdx>=quizQs.length){quizDone=true;renderQuizResult();}
-    else renderQuizQ();
-  },500);
+  stopAudio();
+  quizDone=true;
+  renderQuizResult();
 }
 function renderQuizResult(){
   // Calculate score from stored answers
@@ -1150,6 +1219,7 @@ function renderQuizResult(){
   // Full question review
   const reviewRows=quizQs.map((q,i)=>{
     const selected=quizResults[i];
+    const unanswered=(selected===null||selected===undefined);
     const isCorrect=selected===q.ans;
     const icon=isCorrect?'✓':'✗';
     const iconColor=isCorrect?'#4ade80':'#e57373';
@@ -1162,6 +1232,7 @@ function renderQuizResult(){
         <span style="color:${optColor};font-weight:${fw}">${a}</span>
       </div>`;
     }).join('');
+    const unansweredNote=unanswered?'<div style="font-size:10px;color:#f0b429;margin-bottom:.4rem">Sin responder</div>':'';
     return `<div style="background:#161b2e;border:1px solid ${isCorrect?'#1a2744':'#2a1215'};border-radius:12px;padding:1rem;margin-bottom:8px;text-align:left">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:.5rem">
         <div>
@@ -1170,6 +1241,7 @@ function renderQuizResult(){
         </div>
         <span style="font-size:16px;font-weight:700;color:${iconColor};flex-shrink:0">${icon}</span>
       </div>
+      ${unansweredNote}
       <div style="font-size:13px;color:#e8eaf0;line-height:1.5;margin-bottom:.65rem">${q.q}</div>
       ${opts}
       ${buildInstructorBar(q,true)}
